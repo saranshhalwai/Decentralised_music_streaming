@@ -289,6 +289,42 @@ Decentralised_music_streaming/
 
 ---
 
+## 8. Current Task: Restructuring & Incorporating Zip File
+
+Based on an analysis of the provided `Decentralised_music_streaming.zip` and the existing codebase:
+
+1. **The Zip File:** Provides the ideal directory structure (`blockchain/`, `frontend/`, `docs/`) as outlined in this document, but contains older JavaScript-based Hardhat code and older Solidity contracts (0.8.25).
+2. **The Existing Code:** Resides incorrectly at the root of the project, but contains modern TypeScript-based Hardhat code and optimized Solidity contracts (0.8.28, custom errors, etc).
+
+### Proposed Approach (The "Best of Both Worlds")
+We will adopt the organizational structure from the zip file but keep our superior existing code.
+1. Create `blockchain/`, `frontend/`, and `docs/` directories at the project root.
+2. Move all existing Hardhat files and directories (`contracts/`, `scripts/`, `test/`, `ignition/`, `artifacts/`, `cache/`, `types/`, `hardhat.config.ts`, `package.json`, `package-lock.json`, `tsconfig.json`, `node_modules/`) into the new `blockchain/` directory.
+3. Clean up the extracted zip file contents (`temp_zip_extracted/`) and the original zip file as we already have what we need.
+
+> [!IMPORTANT]
+> **User Review Required:** Does this approach sound good? We will move your existing Hardhat project into the `blockchain/` folder and set up the `frontend/` and `docs/` folders to match the intended architecture.
+
+---
+
+## 8. Current Task: Restructuring & Incorporating Zip File
+
+Based on an analysis of the provided `Decentralised_music_streaming.zip` and the existing codebase:
+
+1. **The Zip File:** Provides the ideal directory structure (`blockchain/`, `frontend/`, `docs/`) as outlined in this document, but contains older JavaScript-based Hardhat code and older Solidity contracts (0.8.25).
+2. **The Existing Code:** Resides incorrectly at the root of the project, but contains modern TypeScript-based Hardhat code and optimized Solidity contracts (0.8.28, custom errors, etc).
+
+### Proposed Approach (The "Best of Both Worlds")
+We will adopt the organizational structure from the zip file but keep our superior existing code.
+1. Create `blockchain/`, `frontend/`, and `docs/` directories at the project root.
+2. Move all existing Hardhat files and directories (`contracts/`, `scripts/`, `test/`, `ignition/`, `artifacts/`, `cache/`, `types/`, `hardhat.config.ts`, `package.json`, `package-lock.json`, `tsconfig.json`, `node_modules/`) into the new `blockchain/` directory.
+3. Clean up the extracted zip file contents (`temp_zip_extracted/`) as we already have what we need.
+
+> [!IMPORTANT]
+> **User Review Required:** Does this approach sound good? We will move your existing Hardhat project into the `blockchain/` folder and set up the `frontend/` and `docs/` folders to match the intended architecture.
+
+---
+
 ## Verification Plan
 
 Since this is a planning/strategy document (no code changes), verification will happen as the team progresses through each phase:
