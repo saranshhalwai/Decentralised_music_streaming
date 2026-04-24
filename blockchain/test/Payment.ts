@@ -6,12 +6,29 @@ const { ethers } = await network.connect();
 describe("Payment", function () {
   async function deployFixture() {
     const [owner, artist, fan, other] = await ethers.getSigners();
+
+    const MusicRegistry = await ethers.getContractFactory("MusicRegistry");
+    const registry = await MusicRegistry.deploy();
+    await registry.waitForDeployment();
+
     const Payment = await ethers.getContractFactory("Payment");
-    const payment = await Payment.deploy();
+    const payment = await Payment.deploy(await registry.getAddress());
     await payment.waitForDeployment();
+
     const ONE_ETH = ethers.parseEther("1.0");
     const HALF_ETH = ethers.parseEther("0.5");
-    return { payment, owner, artist, fan, other, ONE_ETH, HALF_ETH };
+    return { payment, registry, owner, artist, fan, other, ONE_ETH, HALF_ETH };
+  }
+
+  async function uploadTrack(registry: any, artist: any) {
+    await (await registry.connect(artist).uploadTrack(
+      "Sample Track",
+      "Artist Name",
+      "Genre",
+      "QmAudio",
+      "QmCover"
+    )).wait();
+    return 0; // First track ID
   }
 
   // -------------------------------------------------------------------------
@@ -60,30 +77,33 @@ describe("Payment", function () {
   // -------------------------------------------------------------------------
   describe("streamPayment", function () {
     it("should credit artist and emit StreamPayment", async function () {
-      const { payment, artist, fan } = await deployFixture();
+      const { payment, registry, artist, fan } = await deployFixture();
+      const trackId = await uploadTrack(registry, artist);
       const streamFee = ethers.parseEther("0.001");
 
       await expect(
-        payment.connect(fan).streamPayment(42, artist.address, { value: streamFee })
+        payment.connect(fan).streamPayment(trackId, { value: streamFee })
       )
         .to.emit(payment, "StreamPayment")
-        .withArgs(fan.address, 42, artist.address, streamFee);
+        .withArgs(fan.address, trackId, artist.address, streamFee);
 
       expect(await payment.earningsOf(artist.address)).to.equal(streamFee);
     });
 
     it("should revert with ZeroValue when msg.value is 0", async function () {
-      const { payment, artist, fan } = await deployFixture();
+      const { payment, registry, artist, fan } = await deployFixture();
+      const trackId = await uploadTrack(registry, artist);
       await expect(
-        payment.connect(fan).streamPayment(0, artist.address, { value: 0 })
+        payment.connect(fan).streamPayment(trackId, { value: 0 })
       ).to.be.revertedWithCustomError(payment, "ZeroValue");
     });
 
-    it("should revert with ZeroAddress when artist is zero address", async function () {
-      const { payment, fan, ONE_ETH } = await deployFixture();
+    it("should revert with TrackNotFound for non-existent trackId", async function () {
+      const { payment, registry, ONE_ETH } = await deployFixture();
       await expect(
-        payment.connect(fan).streamPayment(0, ethers.ZeroAddress, { value: ONE_ETH })
-      ).to.be.revertedWithCustomError(payment, "ZeroAddress");
+        payment.streamPayment(999, { value: ONE_ETH })
+      ).to.be.revertedWithCustomError(registry, "TrackNotFound")
+       .withArgs(999);
     });
   });
 
