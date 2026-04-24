@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState, useEffect } from "react";
-import { Music, Wallet, Home, Compass, User, LayoutDashboard } from "lucide-react";
+import { Music, Wallet, Home, Compass, User, LayoutDashboard, ShoppingBag } from "lucide-react";
 import { getWeb3Provider, formatAddress } from "@/lib/web3";
 
 export default function Navbar() {
@@ -46,6 +46,7 @@ export default function Navbar() {
             <div className="hidden md:flex items-center space-x-1">
               <NavLink href="/" icon={<Home className="w-4 h-4" />} text="Home" />
               <NavLink href="/explore" icon={<Compass className="w-4 h-4" />} text="Explore" />
+              <NavLink href="/marketplace" icon={<ShoppingBag className="w-4 h-4" />} text="Marketplace" />
               <NavLink href="/dashboard" icon={<LayoutDashboard className="w-4 h-4" />} text="Artist" />
             </div>
           </div>

@@ -44,15 +44,47 @@ async function main() {
   console.log("✅ MusicNFT deployed to:", nftAddress);
 
   // ------------------------------------------------------------------
+  // 4. MusicNFTMarketplace
+  // ------------------------------------------------------------------
+  console.log("\nDeploying MusicNFTMarketplace...");
+  const MusicNFTMarketplace = await ethers.getContractFactory("MusicNFTMarketplace");
+  
+  const royaltyFee = ethers.parseEther("0.0001");
+  const artistAddress = deployer.address;
+  const prices = [
+    ethers.parseEther("0.01"),
+    ethers.parseEther("0.02"),
+    ethers.parseEther("0.03"),
+    ethers.parseEther("0.04"),
+    ethers.parseEther("0.05"),
+    ethers.parseEther("0.06"),
+    ethers.parseEther("0.07"),
+    ethers.parseEther("0.08")
+  ];
+  
+  const totalValue = royaltyFee * BigInt(prices.length);
+
+  const musicNFTMarketplace = await MusicNFTMarketplace.deploy(
+    royaltyFee,
+    artistAddress,
+    prices,
+    { value: totalValue }
+  );
+  await musicNFTMarketplace.waitForDeployment();
+  const marketplaceAddress = await musicNFTMarketplace.getAddress();
+  console.log("✅ MusicNFTMarketplace deployed to:", marketplaceAddress);
+
+  // ------------------------------------------------------------------
   // Summary
   // ------------------------------------------------------------------
   console.log("\n========================================");
   console.log("📋 Deployment Summary");
   console.log("========================================");
-  console.log(`Network:        ${network.name}`);
-  console.log(`MusicRegistry:  ${registryAddress}`);
-  console.log(`Payment:        ${paymentAddress}`);
-  console.log(`MusicNFT:       ${nftAddress}`);
+  console.log(`Network:              ${network.name}`);
+  console.log(`MusicRegistry:        ${registryAddress}`);
+  console.log(`Payment:              ${paymentAddress}`);
+  console.log(`MusicNFT:             ${nftAddress}`);
+  console.log(`MusicNFTMarketplace:  ${marketplaceAddress}`);
   console.log("========================================");
   console.log("\n⚠️  Save these addresses! Update your frontend .env with them.");
 }

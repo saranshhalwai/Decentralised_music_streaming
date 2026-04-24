@@ -1,173 +1,306 @@
 "use client";
 
-import { useState } from "react";
-import { Upload, Music, Image as ImageIcon, AlertCircle } from "lucide-react";
+import { useState, useCallback } from "react";
+import { Upload, Music, Image as ImageIcon, AlertCircle, Loader2, CheckCircle2, ShoppingBag } from "lucide-react";
 import { uploadFileToIPFS } from "@/lib/ipfs";
 import { getWeb3Provider } from "@/lib/web3";
-import { getMusicRegistryContract } from "@/lib/contracts";
+import { getMusicRegistryContract, getMusicNFTMarketplaceContract } from "@/lib/contracts";
+import { ethers } from "ethers";
+import { EthersError } from "@/types/global.d";
 
 export default function Dashboard() {
+  const [activeTab, setActiveTab] = useState<'track' | 'nft'>('track');
+  
+  // Track Form State
+  const [file, setFile] = useState<File | null>(null);
+  const [cover, setCover] = useState<File | null>(null);
   const [title, setTitle] = useState("");
   const [artistName, setArtistName] = useState("");
-  const [genre, setGenre] = useState("");
-  const [audioFile, setAudioFile] = useState<File | null>(null);
-  const [coverFile, setCoverFile] = useState<File | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
-  const [status, setStatus] = useState("");
+  const [genre, setGenre] = useState("Pop");
+  
+  // NFT Form State
+  const [nftFile, setNftFile] = useState<File | null>(null);
+  const [nftTitle, setNftTitle] = useState("");
+  const [nftPrice, setNftPrice] = useState("0.01");
 
-  const handleUpload = async (e: React.FormEvent) => {
+  const [loading, setLoading] = useState(false);
+  const [status, setStatus] = useState<{ type: 'success' | 'error', message: string } | null>(null);
+
+  const handleUploadTrack = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!audioFile || !coverFile || !title || !artistName || !genre) {
-      setStatus("Please fill all fields and select both files.");
-      return;
-    }
-
-    setIsUploading(true);
-    setStatus("Uploading to IPFS...");
+    if (!file || !cover || !title || !artistName) return;
 
     try {
-      // 1. Upload Cover Art to IPFS
-      const coverCid = await uploadFileToIPFS(coverFile);
-      setStatus("Cover art uploaded! Uploading audio...");
+      setLoading(true);
+      setStatus({ type: 'success', message: "Uploading files to IPFS..." });
 
-      // 2. Upload Audio to IPFS
-      const audioCid = await uploadFileToIPFS(audioFile);
-      setStatus("Files uploaded to IPFS! Registering on Blockchain...");
+      const audioCID = await uploadFileToIPFS(file);
+      const coverCID = await uploadFileToIPFS(cover);
 
-      // 3. Register on Smart Contract
+      setStatus({ type: 'success', message: "Files pinned! Confirming blockchain transaction..." });
+
       const { signer } = await getWeb3Provider();
-      const registry = getMusicRegistryContract(signer);
+      const contract = getMusicRegistryContract(signer);
+
+      const tx = await contract.uploadTrack(title, artistName, genre, audioCID, coverCID);
+      setStatus({ type: 'success', message: "Transaction sent! Waiting for block confirmation..." });
       
-      const tx = await registry.uploadTrack(title, artistName, genre, audioCid, coverCid);
-      setStatus("Transaction pending... Please wait.");
       await tx.wait();
-
-      setStatus("Success! Track has been published to BeatChain.");
-      setIsUploading(false);
+      setStatus({ type: 'success', message: "Track successfully published to the decentralized network!" });
+      
+      // Reset form
       setTitle("");
-      setArtistName("");
-      setGenre("");
-      setAudioFile(null);
-      setCoverFile(null);
-
+      setFile(null);
+      setCover(null);
     } catch (error: unknown) {
-      console.error(error);
-      const err = error as { reason?: string; message?: string };
-      setStatus(err.reason || err.message || "An error occurred during upload.");
-      setIsUploading(false);
+      const err = error as EthersError;
+      console.error(err);
+      setStatus({ type: 'error', message: err.message || "Failed to upload track" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleMintNFT = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!nftFile || !nftTitle || !nftPrice) return;
+
+    try {
+      setLoading(true);
+      setStatus({ type: 'success', message: "Uploading NFT artwork to IPFS..." });
+
+      const imageCID = await uploadFileToIPFS(nftFile);
+      
+      // Create metadata JSON
+      const metadata = {
+        name: nftTitle,
+        description: "Official BeatChain Music Collectible",
+        image: `ipfs://${imageCID}`,
+        attributes: [
+          { trait_type: "Type", value: "Music NFT" },
+          { trait_type: "Platform", value: "BeatChain" }
+        ]
+      };
+      
+      // In a real app, we'd upload this JSON to IPFS too
+      // For this prototype, we'll just use the image CID as the URI
+      const tokenURI = `ipfs://${imageCID}`;
+
+      setStatus({ type: 'success', message: "Artwork pinned! Requesting Mint & List transaction..." });
+
+      const { signer } = await getWeb3Provider();
+      const marketplace = getMusicNFTMarketplaceContract(signer);
+      
+      const royaltyFee = await marketplace.royaltyFee();
+      const priceWei = ethers.parseEther(nftPrice);
+
+      const tx = await marketplace.createToken(tokenURI, priceWei, { value: royaltyFee });
+      setStatus({ type: 'success', message: "Minting transaction sent! Almost there..." });
+      
+      await tx.wait();
+      setStatus({ type: 'success', message: `Successfully minted and listed "${nftTitle}" in the marketplace!` });
+      
+      // Reset form
+      setNftTitle("");
+      setNftFile(null);
+    } catch (error: unknown) {
+      const err = error as EthersError;
+      console.error(err);
+      setStatus({ type: 'error', message: err.message || "Failed to mint NFT" });
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-      <div className="mb-10">
-        <h1 className="text-4xl font-black mb-2">Artist Dashboard</h1>
-        <p className="text-gray-400">Upload your music to IPFS and register it on the blockchain.</p>
-      </div>
+    <div className="max-w-4xl mx-auto px-4 py-12">
+      <div className="bg-[#141414] border border-[#2a2a2a] rounded-3xl p-8 md:p-12 shadow-2xl relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-[#ff2a5f]/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
+        
+        <div className="relative z-10">
+          <h1 className="text-4xl font-black mb-2 text-white">Creator Studio</h1>
+          <p className="text-gray-400 mb-10 text-lg">Upload your music or mint exclusive collectibles.</p>
 
-      <div className="bg-[#141414] border border-[#2a2a2a] rounded-3xl p-8 shadow-2xl">
-        <form onSubmit={handleUpload} className="space-y-6">
-          <div className="grid md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-300">Track Title</label>
-              <input 
-                type="text" 
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                className="w-full bg-[#0d0d0d] border border-[#2a2a2a] rounded-xl px-4 py-3 focus:outline-none focus:border-[#ff2a5f] transition-colors"
-                placeholder="e.g. Neon Dreams"
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-300">Artist Name</label>
-              <input 
-                type="text" 
-                value={artistName}
-                onChange={(e) => setArtistName(e.target.value)}
-                className="w-full bg-[#0d0d0d] border border-[#2a2a2a] rounded-xl px-4 py-3 focus:outline-none focus:border-[#ff2a5f] transition-colors"
-                placeholder="e.g. DJ Ether"
-              />
-            </div>
-          </div>
-          
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-300">Genre</label>
-            <select 
-              value={genre}
-              onChange={(e) => setGenre(e.target.value)}
-              className="w-full bg-[#0d0d0d] border border-[#2a2a2a] rounded-xl px-4 py-3 focus:outline-none focus:border-[#ff2a5f] transition-colors text-white"
+          <div className="flex bg-[#0a0a0a] p-1 rounded-xl border border-[#2a2a2a] mb-10 w-fit">
+            <button 
+              onClick={() => { setActiveTab('track'); setStatus(null); }}
+              className={`flex items-center gap-2 px-6 py-3 rounded-lg text-sm font-bold transition-all ${activeTab === 'track' ? 'bg-[#ff2a5f] text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}
             >
-              <option value="">Select Genre</option>
-              <option value="Electronic">Electronic</option>
-              <option value="Hip Hop">Hip Hop</option>
-              <option value="Pop">Pop</option>
-              <option value="Rock">Rock</option>
-              <option value="Synthwave">Synthwave</option>
-              <option value="Lofi">Lofi</option>
-            </select>
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-6 pt-4">
-            {/* Audio Upload */}
-            <div className="border-2 border-dashed border-[#2a2a2a] rounded-2xl p-6 flex flex-col items-center justify-center text-center hover:border-[#ff2a5f]/50 transition-colors cursor-pointer relative">
-              <input 
-                type="file" 
-                accept="audio/*" 
-                onChange={(e) => setAudioFile(e.target.files?.[0] || null)}
-                className="absolute inset-0 opacity-0 cursor-pointer"
-              />
-              <div className="w-12 h-12 rounded-full bg-[#1f1f1f] flex items-center justify-center mb-4">
-                <Music className="w-6 h-6 text-[#ff2a5f]" />
-              </div>
-              <h3 className="font-medium mb-1">Audio File</h3>
-              <p className="text-sm text-gray-500">{audioFile ? audioFile.name : "MP3, WAV up to 50MB"}</p>
-            </div>
-
-            {/* Cover Upload */}
-            <div className="border-2 border-dashed border-[#2a2a2a] rounded-2xl p-6 flex flex-col items-center justify-center text-center hover:border-[#ff7e40]/50 transition-colors cursor-pointer relative">
-              <input 
-                type="file" 
-                accept="image/*" 
-                onChange={(e) => setCoverFile(e.target.files?.[0] || null)}
-                className="absolute inset-0 opacity-0 cursor-pointer"
-              />
-              <div className="w-12 h-12 rounded-full bg-[#1f1f1f] flex items-center justify-center mb-4">
-                <ImageIcon className="w-6 h-6 text-[#ff7e40]" />
-              </div>
-              <h3 className="font-medium mb-1">Cover Art</h3>
-              <p className="text-sm text-gray-500">{coverFile ? coverFile.name : "JPG, PNG up to 5MB"}</p>
-            </div>
+              <Music className="w-4 h-4" />
+              Publish Track
+            </button>
+            <button 
+              onClick={() => { setActiveTab('nft'); setStatus(null); }}
+              className={`flex items-center gap-2 px-6 py-3 rounded-lg text-sm font-bold transition-all ${activeTab === 'nft' ? 'bg-[#ff2a5f] text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}
+            >
+              <ShoppingBag className="w-4 h-4" />
+              Mint NFT
+            </button>
           </div>
 
           {status && (
-            <div className={`p-4 rounded-xl flex items-center gap-3 ${status.includes('Success') ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-[#1f1f1f] border border-[#2a2a2a]'}`}>
-              <AlertCircle className="w-5 h-5" />
-              <span>{status}</span>
+            <div className={`mb-8 p-4 rounded-2xl flex items-center gap-3 border shadow-lg animate-in fade-in slide-in-from-top-2 ${
+              status.type === 'success' ? 'bg-green-500/10 border-green-500/30 text-green-400' : 'bg-red-500/10 border-red-500/30 text-red-400'
+            }`}>
+              {status.type === 'success' ? <CheckCircle2 className="w-5 h-5 flex-shrink-0" /> : <AlertCircle className="w-5 h-5 flex-shrink-0" />}
+              <p className="text-sm font-medium">{status.message}</p>
             </div>
           )}
 
-          <button 
-            type="submit" 
-            disabled={isUploading}
-            className={`w-full py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-2 transition-all ${
-              isUploading 
-                ? 'bg-[#2a2a2a] text-gray-400 cursor-not-allowed' 
-                : 'bg-gradient-to-r from-[#ff2a5f] to-[#ff7e40] text-white hover:opacity-90 glow-effect'
-            }`}
-          >
-            {isUploading ? (
-              <>
-                <div className="w-5 h-5 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
-                Processing...
-              </>
-            ) : (
-              <>
-                <Upload className="w-5 h-5" />
-                Publish to Network
-              </>
-            )}
-          </button>
-        </form>
+          {activeTab === 'track' ? (
+            <form onSubmit={handleUploadTrack} className="space-y-6">
+              <div className="grid md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-gray-400 ml-1">Track Title</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Moonlight Sonata"
+                    className="w-full bg-[#0a0a0a] border border-[#2a2a2a] rounded-2xl p-4 text-white focus:border-[#ff2a5f] outline-none transition-colors"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-gray-400 ml-1">Artist Name</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Your Stage Name"
+                    className="w-full bg-[#0a0a0a] border border-[#2a2a2a] rounded-2xl p-4 text-white focus:border-[#ff2a5f] outline-none transition-colors"
+                    value={artistName}
+                    onChange={(e) => setArtistName(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-gray-400 ml-1">Genre</label>
+                <select
+                  className="w-full bg-[#0a0a0a] border border-[#2a2a2a] rounded-2xl p-4 text-white focus:border-[#ff2a5f] outline-none transition-colors appearance-none"
+                  value={genre}
+                  onChange={(e) => setGenre(e.target.value)}
+                >
+                  <option>Pop</option>
+                  <option>Electronic</option>
+                  <option>Hip Hop</option>
+                  <option>Rock</option>
+                  <option>Classical</option>
+                  <option>Jazz</option>
+                  <option>Lo-Fi</option>
+                </select>
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-gray-400 ml-1 flex items-center gap-2">
+                    <Music className="w-4 h-4" /> Audio File (MP3)
+                  </label>
+                  <div className="relative group">
+                    <input
+                      type="file"
+                      accept="audio/mp3"
+                      required
+                      onChange={(e) => setFile(e.target.files?.[0] || null)}
+                      className="w-full bg-[#0a0a0a] border border-[#2a2a2a] rounded-2xl p-4 text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[#ff2a5f]/10 file:text-[#ff2a5f] hover:file:bg-[#ff2a5f]/20 cursor-pointer"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-gray-400 ml-1 flex items-center gap-2">
+                    <ImageIcon className="w-4 h-4" /> Cover Art
+                  </label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    required
+                    onChange={(e) => setCover(e.target.files?.[0] || null)}
+                    className="w-full bg-[#0a0a0a] border border-[#2a2a2a] rounded-2xl p-4 text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[#ff2a5f]/10 file:text-[#ff2a5f] hover:file:bg-[#ff2a5f]/20 cursor-pointer"
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-4 mt-4 bg-[#ff2a5f] text-white font-black rounded-2xl shadow-xl shadow-[#ff2a5f]/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3 disabled:bg-gray-700 disabled:cursor-not-allowed"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="w-5 h-5" />
+                    Publish to Network
+                  </>
+                )}
+              </button>
+            </form>
+          ) : (
+            <form onSubmit={handleMintNFT} className="space-y-6">
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-gray-400 ml-1">Collectible Name</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Genesis Edition #1"
+                  className="w-full bg-[#0a0a0a] border border-[#2a2a2a] rounded-2xl p-4 text-white focus:border-[#ff2a5f] outline-none transition-colors"
+                  value={nftTitle}
+                  onChange={(e) => setNftTitle(e.target.value)}
+                />
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-gray-400 ml-1 flex items-center gap-2">
+                    <ImageIcon className="w-4 h-4" /> NFT Artwork
+                  </label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    required
+                    onChange={(e) => setNftFile(e.target.files?.[0] || null)}
+                    className="w-full bg-[#0a0a0a] border border-[#2a2a2a] rounded-2xl p-4 text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[#ff2a5f]/10 file:text-[#ff2a5f] hover:file:bg-[#ff2a5f]/20 cursor-pointer"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-gray-400 ml-1">Listing Price (ETH)</label>
+                  <input
+                    type="number"
+                    step="0.001"
+                    required
+                    className="w-full bg-[#0a0a0a] border border-[#2a2a2a] rounded-2xl p-4 text-white focus:border-[#ff2a5f] outline-none transition-colors"
+                    value={nftPrice}
+                    onChange={(e) => setNftPrice(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-4 mt-4 bg-gradient-to-r from-[#ff2a5f] to-[#ff7e40] text-white font-black rounded-2xl shadow-xl shadow-[#ff2a5f]/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3 disabled:bg-gray-700 disabled:cursor-not-allowed"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    <ShoppingBag className="w-5 h-5" />
+                    Mint & List NFT
+                  </>
+                )}
+              </button>
+              <p className="text-[10px] text-gray-600 text-center uppercase tracking-widest font-bold">
+                Small listing fee (0.0001 ETH) applies
+              </p>
+            </form>
+          )}
+        </div>
       </div>
     </div>
   );

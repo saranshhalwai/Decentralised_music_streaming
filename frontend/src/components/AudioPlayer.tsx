@@ -208,6 +208,7 @@ export default function AudioPlayer() {
               alt="Cover" 
               fill
               unoptimized
+              priority
               sizes="48px"
               className="object-cover" 
             />
