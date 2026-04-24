@@ -1,11 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState, useCallback } from "react";
+import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { Play, Pause, SkipBack, SkipForward, Volume2, Maximize2, AlertCircle, Loader2, ExternalLink } from "lucide-react";
 import { useAudioPlayer } from "@/context/AudioPlayerContext";
 import { getWeb3Provider } from "@/lib/web3";
-import { getPaymentContract } from "@/lib/contracts";
+import { getPaymentContract, PAYMENT_ADDRESS } from "@/lib/contracts";
 import { ethers } from "ethers";
+import Image from "next/image";
+import { EthersError } from "@/types/global.d";
 
 const fallbackTrack = {
   id: "sample",
@@ -17,7 +19,7 @@ const fallbackTrack = {
   artist_address: "0x0000000000000000000000000000000000000000",
   ipfsCID: "",
   coverUrl: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?q=80&w=400&auto=format&fit=crop",
-  playCount: 0
+  playCount: BigInt(0)
 };
 
 const GATEWAYS = [
@@ -41,6 +43,9 @@ export default function AudioPlayer() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [gatewayIndex, setGatewayIndex] = useState(0);
+  
+  // Track tracking to avoid cascades
+  const lastTrackId = useRef<string | null>(null);
 
   const track = useMemo(() => currentTrack ?? fallbackTrack, [currentTrack]);
 
@@ -54,44 +59,48 @@ export default function AudioPlayer() {
   // Unified Playback Control
   useEffect(() => {
     const audio = audioRef.current;
-    if (!audio || !isPlaying) {
-      audio?.pause();
-      return;
-    }
+    if (!audio) return;
 
-    if (audio.src && audio.src !== window.location.href) {
-      audio.play().catch(err => {
-        if (err.name !== "AbortError") {
-          console.error("Playback error:", err.name, activeSrc);
-          
-          // If we have more gateways to try, switch
-          if (gatewayIndex < GATEWAYS.length - 1) {
-            setError(`Gateway ${gatewayIndex + 1} slow, switching...`);
-            setGatewayIndex(prev => prev + 1);
-          } else {
-            setError("All IPFS gateways failed to serve this file. It might still be propagating.");
-            setIsPlaying(false);
+    if (isPlaying) {
+      if (audio.src && audio.src !== window.location.href) {
+        audio.play().catch(err => {
+          if (err.name !== "AbortError") {
+            console.error("Playback error:", err.name, activeSrc);
+            
+            if (gatewayIndex < GATEWAYS.length - 1) {
+              setError(`Gateway ${gatewayIndex + 1} slow, switching...`);
+              setGatewayIndex(prev => prev + 1);
+            } else {
+              setError("All IPFS gateways failed to serve this file.");
+              setIsPlaying(false);
+            }
           }
-        }
-      });
+        });
+      }
+    } else {
+      audio.pause();
     }
   }, [isPlaying, activeSrc, gatewayIndex, audioRef, setIsPlaying]);
 
-  // Track Change logic
+  // Track Change logic - use a ref to prevent cascade
   useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio || !currentTrack) return;
-
-    setError(null);
-    setGatewayIndex(0);
-    setCurrentTime(0);
-    setDuration(0);
-    
-    if (currentTrack.id !== "sample") {
-      setIsLoading(true);
-      setIsPlaying(true);
+    if (currentTrack?.id && currentTrack.id !== lastTrackId.current) {
+      lastTrackId.current = currentTrack.id;
+      
+      // Wrap in timeout to defer state updates out of the render cycle
+      setTimeout(() => {
+        setError(null);
+        setGatewayIndex(0);
+        setCurrentTime(0);
+        setDuration(0);
+        
+        if (currentTrack.id !== "sample") {
+          setIsLoading(true);
+          setIsPlaying(true);
+        }
+      }, 0);
     }
-  }, [currentTrack?.id, audioRef, setIsPlaying]);
+  }, [currentTrack, setIsPlaying]);
 
   // Volume control
   useEffect(() => {
@@ -116,44 +125,41 @@ export default function AudioPlayer() {
   }, [setIsPlaying]);
 
   const onAudioError = useCallback(() => {
-    // This is often triggered when src is set but fails to load
     if (gatewayIndex < GATEWAYS.length - 1) {
-       // Handled by the play() catch block primarily, but just in case:
        setGatewayIndex(prev => prev + 1);
     } else {
       setIsLoading(false);
       setIsPlaying(false);
-      setError("Media Error: File could not be loaded from the decentralized network.");
+      setError("Media Error: File could not be loaded.");
     }
   }, [gatewayIndex, setIsPlaying]);
+
+  const triggerPayment = useCallback(async (trackId: string) => {
+    try {
+      if (trackId === "sample") return;
+      if (!PAYMENT_ADDRESS || PAYMENT_ADDRESS.startsWith("0x0000")) return;
+
+      const { signer } = await getWeb3Provider();
+      const paymentContract = getPaymentContract(signer);
+      const streamFee = ethers.parseEther("0.0001");
+      
+      console.log("Sending stream payment for track:", trackId);
+      await paymentContract.streamPayment(BigInt(trackId), { value: streamFee });
+    } catch (err: unknown) {
+      const error = err as EthersError;
+      if (error.code !== "ACTION_REJECTED") {
+        console.error("Stream payment failed:", error);
+      }
+    }
+  }, []);
 
   const onCanPlay = useCallback(() => {
     setIsLoading(false);
     setError(null);
-    
-    // Process payment only when we know the track CAN actually play
-    if (currentTrack && currentTrack.id !== "sample") {
-      const triggerPayment = async () => {
-        try {
-          const { signer } = await getWeb3Provider();
-          const { PAYMENT_ADDRESS } = await import("@/lib/contracts");
-          if (!PAYMENT_ADDRESS || PAYMENT_ADDRESS.startsWith("0x0000")) return;
-
-          const paymentContract = getPaymentContract(signer);
-          const streamFee = ethers.parseEther("0.0001");
-          const trackId = BigInt(currentTrack.id);
-          
-          console.log("Sending stream payment for track:", trackId);
-          await paymentContract.streamPayment(trackId, { value: streamFee });
-        } catch (error: any) {
-          if (error.code !== "ACTION_REJECTED") {
-            console.error("Stream payment failed:", error);
-          }
-        }
-      };
-      triggerPayment();
+    if (currentTrack) {
+      triggerPayment(currentTrack.id);
     }
-  }, [currentTrack?.id]);
+  }, [currentTrack, triggerPayment]);
 
   return (
     <div className="fixed bottom-0 w-full glass-panel border-t border-white/10 z-50 px-4 py-3">
@@ -173,13 +179,11 @@ export default function AudioPlayer() {
         {/* Track Info */}
         <div className="flex items-center gap-4 w-full md:w-1/4">
           <div className="w-12 h-12 bg-gradient-to-tr from-[#ff2a5f] to-[#ff7e40] rounded-md shadow-lg overflow-hidden relative">
-            <img 
+            <Image 
               src={track.coverUrl || fallbackTrack.coverUrl} 
               alt="Cover" 
-              className="w-full h-full object-cover" 
-              onError={(e) => {
-                (e.target as HTMLImageElement).src = fallbackTrack.coverUrl;
-              }}
+              fill
+              className="object-cover" 
             />
             {isLoading && (
               <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
@@ -251,7 +255,7 @@ export default function AudioPlayer() {
               />
               {error && (
                 <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-[#ff2a5f] text-white text-[10px] px-2 py-1 rounded flex items-center gap-1 whitespace-nowrap shadow-lg">
-                  <AlertCircle className="w-3 h-3" />
+                  {gatewayIndex < GATEWAYS.length - 1 && isLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <AlertCircle className="w-3 h-3" />}
                   {error}
                 </div>
               )}

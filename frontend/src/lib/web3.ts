@@ -1,4 +1,5 @@
 import { BrowserProvider } from "ethers";
+import { EthersError } from "@/types/global.d";
 
 const SEPOLIA_CHAIN_ID = "0xaa36a7"; // 11155111 in hex
 
@@ -19,7 +20,8 @@ export const getWeb3Provider = async () => {
         method: "wallet_switchEthereumChain",
         params: [{ chainId: SEPOLIA_CHAIN_ID }],
       });
-    } catch (switchError: any) {
+    } catch (err: unknown) {
+      const switchError = err as EthersError;
       // This error code indicates that the chain has not been added to MetaMask.
       if (switchError.code === 4902) {
         try {
@@ -39,7 +41,7 @@ export const getWeb3Provider = async () => {
               },
             ],
           });
-        } catch (addError) {
+        } catch {
           throw new Error("Could not add Sepolia network to MetaMask");
         }
       } else {
@@ -57,4 +59,3 @@ export const getWeb3Provider = async () => {
 export const formatAddress = (address: string) => {
   return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
 };
-

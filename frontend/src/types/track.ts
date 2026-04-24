@@ -8,5 +8,5 @@ export interface Track {
   coverArtCID: string;
   src: string;
   coverUrl: string;
-  playCount: number;
+  playCount: number | bigint;
 }

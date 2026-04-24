@@ -31,7 +31,7 @@ export default function ExplorePage() {
         const fetchedTracks: Track[] = [];
         for (let i = 0; i < trackCount; i++) {
           try {
-            const trackData = await registry.getTrack(i);
+            const trackData = await registry.getTrack(BigInt(i));
             fetchedTracks.push({
               id: trackData.id.toString(),
               title: trackData.title,
@@ -42,7 +42,7 @@ export default function ExplorePage() {
               coverArtCID: trackData.coverArtCID,
               src: getIPFSUrl(trackData.ipfsCID),
               coverUrl: getIPFSUrl(trackData.coverArtCID),
-              playCount: Number(trackData.playCount),
+              playCount: trackData.playCount, // This is already bigint from ethers v6
             });
           } catch (e) {
             console.error(`Error fetching track ${i}:`, e);

@@ -1,15 +1,9 @@
 import { Play, Disc, Heart } from "lucide-react";
 import { Track } from "@/types/track";
-import { useAudioPlayer } from "@/context/AudioPlayerContext";
+import Image from "next/image";
 
 export default function TrackCard({ track, onPlay }: { track: Track; onPlay: (track: Track) => void }) {
-  const { audioRef } = useAudioPlayer();
-
-  const coverUrl = track.coverArtCID
-    ? track.coverArtCID.startsWith("http")
-      ? track.coverArtCID
-      : `https://gateway.pinata.cloud/ipfs/${track.coverArtCID}`
-    : "https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=500&auto=format&fit=crop";
+  const coverUrl = track.coverUrl || "https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=500&auto=format&fit=crop";
 
   const handlePlayClick = () => {
     onPlay(track);
@@ -18,15 +12,16 @@ export default function TrackCard({ track, onPlay }: { track: Track; onPlay: (tr
   return (
     <div className="group relative rounded-2xl overflow-hidden bg-[#141414] border border-[#2a2a2a] hover:border-[#ff2a5f]/50 transition-all duration-300">
       <div className="aspect-square relative overflow-hidden">
-        <img 
+        <Image 
           src={coverUrl} 
           alt={track.title} 
-          className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-500"
+          fill
+          className="object-cover group-hover:scale-105 transition-transform duration-500"
         />
         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
           <button 
             onClick={handlePlayClick}
-            className="w-16 h-16 rounded-full bg-[#ff2a5f] flex items-center justify-center text-white hover:scale-110 transition-transform duration-300 glow-effect"
+            className="w-16 h-16 rounded-full bg-[#ff2a5f] flex items-center justify-center text-white hover:scale-110 transition-transform duration-300 glow-effect z-10"
           >
             <Play className="w-8 h-8 ml-1" fill="currentColor" />
           </button>

@@ -1,12 +1,14 @@
-export {};
+/* eslint-disable @typescript-eslint/no-explicit-any */
+export interface EthersError extends Error {
+  code?: string | number;
+  reason?: string;
+  action?: string;
+  transaction?: any;
+  receipt?: any;
+}
 
 declare global {
   interface Window {
-    ethereum?: {
-      isMetaMask?: boolean;
-      request: (request: { method: string; params?: Array<unknown> }) => Promise<unknown>;
-      on: (event: string, callback: (...args: unknown[]) => void) => void;
-      removeListener: (event: string, callback: (...args: unknown[]) => void) => void;
-    };
+    ethereum?: any;
   }
 }
