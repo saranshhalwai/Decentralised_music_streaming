@@ -1,149 +1,114 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-/// @title MusicRegistry
-/// @notice On-chain catalog of music tracks. Artists register tracks (stored on IPFS)
-///         and fans can increment play counts.
-contract MusicRegistry {
-    // -------------------------------------------------------------------------
-    // Data structures
-    // -------------------------------------------------------------------------
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "./MusicRegistry.sol";
 
-    struct Track {
-        uint256 id;
-        address artist;
-        string title;
-        string artistName;
-        string genre;
-        string ipfsCID;      // CID of the audio file on IPFS
-        string coverArtCID;  // CID of the cover image on IPFS
-        uint256 timestamp;
-        uint256 playCount;
-        bool exists;
-    }
-
+/// @title Payment
+/// @notice Handles artist tips and per-stream micro-payments.
+///         Artists accumulate earnings on-chain and withdraw at will.
+contract Payment is ReentrancyGuard {
     // -------------------------------------------------------------------------
     // State
     // -------------------------------------------------------------------------
 
-    uint256 private _nextTrackId;
+    MusicRegistry public registry;
 
-    /// trackId => Track
-    mapping(uint256 => Track) private _tracks;
+    /// artist address => unclaimed ETH balance (in wei)
+    mapping(address => uint256) private _earnings;
 
-    /// artist address => list of trackIds they own
-    mapping(address => uint256[]) private _artistTracks;
+    /// trackId => total lifetime earnings
+    mapping(uint256 => uint256) public trackEarnings;
+
+    /// total platform payments processed (tips + streams)
+    uint256 public totalPlatformPayments;
 
     // -------------------------------------------------------------------------
     // Events
     // -------------------------------------------------------------------------
 
-    event TrackUploaded(
-        uint256 indexed trackId,
+    event TipReceived(
+        address indexed fan,
         address indexed artist,
-        string title,
-        string genre,
-        string ipfsCID,
-        string coverArtCID,
-        uint256 timestamp
+        uint256 amount
     );
 
-    event PlayCountIncremented(uint256 indexed trackId, uint256 newPlayCount);
+    event StreamPayment(
+        address indexed fan,
+        uint256 indexed trackId,
+        address indexed artist,
+        uint256 amount
+    );
+
+    event EarningsWithdrawn(address indexed artist, uint256 amount);
 
     // -------------------------------------------------------------------------
     // Errors
     // -------------------------------------------------------------------------
 
-    error TrackNotFound(uint256 trackId);
-    error EmptyField(string fieldName);
+    error ZeroValue();
+    error ZeroAddress();
+    error NoEarnings();
+    error TransferFailed();
+
+    // -------------------------------------------------------------------------
+    // Constructor
+    // -------------------------------------------------------------------------
+
+    constructor(address _registryAddress) {
+        registry = MusicRegistry(_registryAddress);
+    }
 
     // -------------------------------------------------------------------------
     // Mutating functions
     // -------------------------------------------------------------------------
 
-    /// @notice Register a new track on-chain.
-    /// @param title        Human-readable title of the track.
-    /// @param artistName   Display name of the artist.
-    /// @param genre        Genre string (e.g. "Hip-Hop", "Electronic").
-    /// @param ipfsCID      IPFS CID of the audio file.
-    /// @param coverArtCID  IPFS CID of the cover art image.
-    /// @return trackId     The ID assigned to this track.
-    function uploadTrack(
-        string calldata title,
-        string calldata artistName,
-        string calldata genre,
-        string calldata ipfsCID,
-        string calldata coverArtCID
-    ) external returns (uint256 trackId) {
-        if (bytes(title).length == 0)       revert EmptyField("title");
-        if (bytes(artistName).length == 0)  revert EmptyField("artistName");
-        if (bytes(ipfsCID).length == 0)     revert EmptyField("ipfsCID");
-        if (bytes(coverArtCID).length == 0) revert EmptyField("coverArtCID");
+    /// @notice Send a tip directly to an artist. The full msg.value is credited.
+    /// @param artist  The artist's wallet address.
+    function tipArtist(address artist) external payable {
+        if (msg.value == 0)             revert ZeroValue();
+        if (artist == address(0))       revert ZeroAddress();
 
-        trackId = _nextTrackId;
-        _nextTrackId++;
-
-        _tracks[trackId] = Track({
-            id: trackId,
-            artist: msg.sender,
-            title: title,
-            artistName: artistName,
-            genre: genre,
-            ipfsCID: ipfsCID,
-            coverArtCID: coverArtCID,
-            timestamp: block.timestamp,
-            playCount: 0,
-            exists: true
-        });
-
-        _artistTracks[msg.sender].push(trackId);
-
-        emit TrackUploaded(
-            trackId,
-            msg.sender,
-            title,
-            genre,
-            ipfsCID,
-            coverArtCID,
-            block.timestamp
-        );
+        _earnings[artist] += msg.value;
+        totalPlatformPayments += msg.value;
+        emit TipReceived(msg.sender, artist, msg.value);
     }
 
-    /// @notice Increment the play count of a track by 1. Anyone can call this.
-    /// @param trackId  The ID of the track being played.
-    function incrementPlayCount(uint256 trackId) external {
-        if (!_tracks[trackId].exists) revert TrackNotFound(trackId);
-        _tracks[trackId].playCount += 1;
-        emit PlayCountIncremented(trackId, _tracks[trackId].playCount);
+    /// @notice Pay for a stream (micro-payment). The full msg.value goes to the artist.
+    /// @param trackId  The ID of the track being streamed.
+    function streamPayment(uint256 trackId) external payable {
+        if (msg.value == 0) revert ZeroValue();
+        
+        // Fetch the artist securely from the registry
+        address artist = registry.getTrack(trackId).artist;
+
+        _earnings[artist] += msg.value;
+        trackEarnings[trackId] += msg.value;
+        totalPlatformPayments += msg.value;
+        
+        emit StreamPayment(msg.sender, trackId, artist, msg.value);
+    }
+
+    /// @notice Withdraw all accumulated earnings. Only the artist themselves can call.
+    function withdrawEarnings() external nonReentrant {
+        uint256 amount = _earnings[msg.sender];
+        if (amount == 0) revert NoEarnings();
+
+        // Effect before interaction (re-entrancy guard pattern)
+        _earnings[msg.sender] = 0;
+
+        (bool ok, ) = payable(msg.sender).call{value: amount}("");
+        if (!ok) revert TransferFailed();
+
+        emit EarningsWithdrawn(msg.sender, amount);
     }
 
     // -------------------------------------------------------------------------
     // View functions
     // -------------------------------------------------------------------------
 
-    /// @notice Fetch a single track by ID.
-    function getTrack(uint256 trackId) external view returns (Track memory) {
-        if (!_tracks[trackId].exists) revert TrackNotFound(trackId);
-        return _tracks[trackId];
-    }
-
-    /// @notice Get all track IDs uploaded by a specific artist.
-    function getTrackIdsByArtist(address artist) external view returns (uint256[] memory) {
-        return _artistTracks[artist];
-    }
-
-    /// @notice Convenience: get full Track structs for all tracks by an artist.
-    function getTracksByArtist(address artist) external view returns (Track[] memory) {
-        uint256[] memory ids = _artistTracks[artist];
-        Track[] memory result = new Track[](ids.length);
-        for (uint256 i = 0; i < ids.length; i++) {
-            result[i] = _tracks[ids[i]];
-        }
-        return result;
-    }
-
-    /// @notice Total number of tracks ever registered.
-    function totalTracks() external view returns (uint256) {
-        return _nextTrackId;
+    /// @notice Check how much ETH an artist has accumulated.
+    function earningsOf(address artist) external view returns (uint256) {
+        return _earnings[artist];
     }
 }
