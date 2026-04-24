@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/token/common/ERC2981.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "./MusicRegistry.sol";
 
 /// @title MusicNFT
 /// @notice ERC-721 collectibles linked to tracks on the MusicRegistry with ERC-2981 royalties.
@@ -16,6 +17,8 @@ contract MusicNFT is ERC721URIStorage, ERC2981, Ownable {
     // -------------------------------------------------------------------------
 
     uint256 private _nextTokenId;
+    
+    MusicRegistry public registry;
 
     struct Collectible {
         uint256 tokenId;
@@ -45,12 +48,15 @@ contract MusicNFT is ERC721URIStorage, ERC2981, Ownable {
 
     error EmptyMetadataURI();
     error TokenNotFound(uint256 tokenId);
+    error NotTrackOwner();
 
     // -------------------------------------------------------------------------
     // Constructor
     // -------------------------------------------------------------------------
 
-    constructor() ERC721("MusicNFT", "MUSIC") Ownable(msg.sender) {}
+    constructor(address _registryAddress) ERC721("MusicNFT", "MUSIC") Ownable(msg.sender) {
+        registry = MusicRegistry(_registryAddress);
+    }
 
     // -------------------------------------------------------------------------
     // Mutating functions
@@ -71,6 +77,9 @@ contract MusicNFT is ERC721URIStorage, ERC2981, Ownable {
         uint96 royaltyFee
     ) external returns (uint256 tokenId) {
         if (bytes(metadataURI).length == 0) revert EmptyMetadataURI();
+
+        MusicRegistry.Track memory track = registry.getTrack(trackId);
+        if (track.artist != msg.sender) revert NotTrackOwner();
 
         tokenId = _nextTokenId;
         _nextTokenId++;
@@ -117,7 +126,7 @@ contract MusicNFT is ERC721URIStorage, ERC2981, Ownable {
 
     /// @notice Optional burn function for creators to destroy their NFT and remove royalties.
     function burn(uint256 tokenId) external {
-        if (_ownerOf(tokenId) != msg.sender) revert TokenNotFound(tokenId); // Or NotOwner custom error
+        if (_ownerOf(tokenId) != msg.sender) revert TokenNotFound(tokenId); 
         _burn(tokenId);
         _resetTokenRoyalty(tokenId);
     }
