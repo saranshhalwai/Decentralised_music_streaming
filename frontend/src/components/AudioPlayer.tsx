@@ -3,6 +3,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Play, Pause, SkipBack, SkipForward, Volume2, Maximize2 } from "lucide-react";
 import { useAudioPlayer } from "@/context/AudioPlayerContext";
+import { getWeb3Provider } from "@/lib/web3";
+import { getPaymentContract } from "@/lib/contracts";
+import { ethers } from "ethers";
 
 const fallbackTrack = {
   id: "sample",
@@ -74,9 +77,28 @@ export default function AudioPlayer() {
     setCurrentTime(0);
     setDuration(0);
 
-    if (currentTrack) {
+    if (currentTrack && currentTrack.id !== "sample") {
       audio.play().catch(() => setIsPlaying(false));
       setIsPlaying(true);
+      
+      // Handle micro-payment for stream
+      const processPayment = async () => {
+        try {
+          const { signer } = await getWeb3Provider();
+          const paymentContract = getPaymentContract(signer);
+          
+          // Small stream fee: 0.0001 ETH
+          const streamFee = ethers.parseEther("0.0001");
+          const tx = await paymentContract.streamPayment(currentTrack.id, { value: streamFee });
+          console.log("Stream payment sent:", tx.hash);
+          // We don't necessarily need to wait for it to be mined to play the song
+          // but we could for stricter enforcement
+        } catch (error) {
+          console.error("Stream payment failed:", error);
+        }
+      };
+      
+      processPayment();
     }
   }, [currentTrack, setIsPlaying]);
 

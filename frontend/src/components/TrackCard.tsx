@@ -1,15 +1,5 @@
-import Link from "next/link";
 import { Play, Disc, Heart } from "lucide-react";
-
-interface Track {
-  id: string;
-  title: string;
-  artist_name: string;
-  genre: string;
-  ipfsCID?: string;
-  coverArtCID?: string;
-  playCount: number;
-}
+import { Track } from "@/types/track";
 
 export default function TrackCard({ track, onPlay }: { track: Track; onPlay: (track: Track) => void }) {
   const coverUrl = track.coverArtCID

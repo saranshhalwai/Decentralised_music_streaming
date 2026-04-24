@@ -26,7 +26,7 @@ async function main() {
   // ------------------------------------------------------------------
   console.log("\nDeploying Payment...");
   const Payment = await hre.ethers.getContractFactory("Payment");
-  const payment = await Payment.deploy();
+  const payment = await Payment.deploy(registryAddress);
   await payment.waitForDeployment();
   const paymentAddress = await payment.getAddress();
   console.log("✅ Payment deployed to:", paymentAddress);
@@ -36,7 +36,7 @@ async function main() {
   // ------------------------------------------------------------------
   console.log("\nDeploying MusicNFT...");
   const MusicNFT = await hre.ethers.getContractFactory("MusicNFT");
-  const musicNFT = await MusicNFT.deploy();
+  const musicNFT = await MusicNFT.deploy(registryAddress);
   await musicNFT.waitForDeployment();
   const nftAddress = await musicNFT.getAddress();
   console.log("✅ MusicNFT deployed to:", nftAddress);
@@ -52,7 +52,7 @@ async function main() {
   console.log(`Payment:        ${paymentAddress}`);
   console.log(`MusicNFT:       ${nftAddress}`);
   console.log("========================================");
-  console.log("\n⚠️  Save these addresses! Update your frontend lib/contracts.ts with them.");
+  console.log("\n⚠️  Save these addresses! Update your frontend .env with them.");
 }
 
 main().catch((err) => {

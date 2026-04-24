@@ -75,7 +75,7 @@ export default function Profile() {
           <div className="space-y-4">
             <div className="flex items-center justify-between border-b border-[#2a2a2a] pb-4">
               <div>
-                <p className="font-medium text-gray-300">Tipped "Neon Dreams"</p>
+                <p className="font-medium text-gray-300">Tipped &quot;Neon Dreams&quot;</p>
                 <p className="text-xs text-gray-500 mt-1">2 hours ago</p>
               </div>
               <span className="text-sm font-bold text-[#ff2a5f]">-0.01 ETH</span>

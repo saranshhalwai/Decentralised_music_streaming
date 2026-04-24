@@ -12,7 +12,7 @@ export default function Navbar() {
     // Check if wallet is already connected
     const checkConnection = async () => {
       if (window.ethereum) {
-        const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+        const accounts = await window.ethereum.request({ method: 'eth_accounts' }) as string[];
         if (accounts.length > 0) {
           setAddress(accounts[0]);
         }

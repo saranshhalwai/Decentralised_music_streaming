@@ -4,64 +4,64 @@ import { useState, useEffect } from "react";
 import TrackCard from "@/components/TrackCard";
 import { Search, Flame } from "lucide-react";
 import { useAudioPlayer } from "@/context/AudioPlayerContext";
+import { getWeb3Provider } from "@/lib/web3";
+import { getMusicRegistryContract } from "@/lib/contracts";
+import { getIPFSUrl } from "@/lib/ipfs";
+
+import { Track } from "@/types/track";
 
 export default function ExplorePage() {
-  const [tracks, setTracks] = useState<any[]>([]);
+  const [tracks, setTracks] = useState<Track[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const { setCurrentTrack, setIsPlaying } = useAudioPlayer();
 
   useEffect(() => {
-    const loadMockData = () => {
-      setTracks([
-        {
-          id: "1",
-          title: "Neon Dreams",
-          artist_name: "Synthwave Master",
-          genre: "Synthwave",
-          ipfsCID: "",
-          coverArtCID: "https://images.unsplash.com/photo-1515378791036-0648a3ef77b2?q=80&w=500&auto=format&fit=crop",
-          src: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
-          playCount: 1250,
-        },
-        {
-          id: "2",
-          title: "Cyber City Protocol",
-          artist_name: "Byte Runner",
-          genre: "Electronic",
-          ipfsCID: "",
-          coverArtCID: "https://images.unsplash.com/photo-1499951360447-b19be8fe80f5?q=80&w=500&auto=format&fit=crop",
-          src: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3",
-          playCount: 890,
-        },
-        {
-          id: "3",
-          title: "Blockchain Beats",
-          artist_name: "Crypto DJ",
-          genre: "Hip Hop",
-          ipfsCID: "",
-          coverArtCID: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?q=80&w=500&auto=format&fit=crop",
-          src: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3",
-          playCount: 3420,
-        },
-        {
-          id: "4",
-          title: "Decentralized Lofi",
-          artist_name: "Chill Nodes",
-          genre: "Lofi",
-          ipfsCID: "",
-          coverArtCID: "https://images.unsplash.com/photo-1494438639946-1ebd1d20bf85?q=80&w=500&auto=format&fit=crop",
-          src: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3",
-          playCount: 560,
+    const fetchTracks = async () => {
+      try {
+        setLoading(true);
+        // We can use a public provider here if we don't want to force login just to browse
+        // But for simplicity in this dev environment, we use getWeb3Provider
+        const { provider } = await getWeb3Provider();
+        const registry = getMusicRegistryContract(provider);
+        
+        const count = await registry.totalTracks();
+        const trackCount = Number(count);
+        
+        const fetchedTracks: Track[] = [];
+        for (let i = 0; i < trackCount; i++) {
+          try {
+            const trackData = await registry.getTrack(i);
+            fetchedTracks.push({
+              id: trackData.id.toString(),
+              title: trackData.title,
+              artist_name: trackData.artistName,
+              artist_address: trackData.artist,
+              genre: trackData.genre,
+              ipfsCID: trackData.ipfsCID,
+              coverArtCID: trackData.coverArtCID,
+              src: getIPFSUrl(trackData.ipfsCID),
+              coverUrl: getIPFSUrl(trackData.coverArtCID),
+              playCount: Number(trackData.playCount),
+            });
+          } catch (e) {
+            console.error(`Error fetching track ${i}:`, e);
+          }
         }
-      ]);
-      setLoading(false);
+        
+        // Sort by playCount or newest first
+        setTracks(fetchedTracks.reverse());
+      } catch (error) {
+        console.error("Error fetching tracks from blockchain:", error);
+      } finally {
+        setLoading(false);
+      }
     };
 
-    loadMockData();
-  }, []);
+    fetchTracks();
+  }, [setCurrentTrack, setIsPlaying]);
 
-  const handlePlay = (track: any) => {
+  const handlePlay = (track: Track) => {
     setCurrentTrack(track);
     setIsPlaying(true);
   };
@@ -112,7 +112,7 @@ export default function ExplorePage() {
       
       {!loading && filteredTracks.length === 0 && (
         <div className="text-center py-20 text-gray-500">
-          <p className="text-xl">No tracks found matching "{search}"</p>
+          <p className="text-xl">No tracks found matching &quot;{search}&quot;</p>
         </div>
       )}
     </div>

@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import { Upload, Music, Image as ImageIcon, AlertCircle } from "lucide-react";
-import { uploadFileToIPFS, getIPFSUrl } from "@/lib/ipfs";
+import { uploadFileToIPFS } from "@/lib/ipfs";
+import { getWeb3Provider } from "@/lib/web3";
+import { getMusicRegistryContract } from "@/lib/contracts";
 
 export default function Dashboard() {
   const [title, setTitle] = useState("");
@@ -31,20 +33,25 @@ export default function Dashboard() {
       const audioCid = await uploadFileToIPFS(audioFile);
       setStatus("Files uploaded to IPFS! Registering on Blockchain...");
 
-      // 3. Register on Smart Contract (simulated)
-      // In full implementation, we'd call MusicRegistry.uploadTrack
-      setTimeout(() => {
-        setStatus("Success! Track has been published to BeatChain.");
-        setIsUploading(false);
-        setTitle("");
-        setGenre("");
-        setAudioFile(null);
-        setCoverFile(null);
-      }, 2000);
+      // 3. Register on Smart Contract
+      const { signer } = await getWeb3Provider();
+      const registry = getMusicRegistryContract(signer);
+      
+      const tx = await registry.uploadTrack(title, genre, audioCid, coverCid);
+      setStatus("Transaction pending... Please wait.");
+      await tx.wait();
 
-    } catch (error) {
+      setStatus("Success! Track has been published to BeatChain.");
+      setIsUploading(false);
+      setTitle("");
+      setGenre("");
+      setAudioFile(null);
+      setCoverFile(null);
+
+    } catch (error: unknown) {
       console.error(error);
-      setStatus("An error occurred during upload.");
+      const err = error as { reason?: string; message?: string };
+      setStatus(err.reason || err.message || "An error occurred during upload.");
       setIsUploading(false);
     }
   };
