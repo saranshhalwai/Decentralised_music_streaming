@@ -6,13 +6,17 @@ interface Track {
   title: string;
   artist_name: string;
   genre: string;
-  ipfsCID: string;
-  coverArtCID: string;
+  ipfsCID?: string;
+  coverArtCID?: string;
   playCount: number;
 }
 
 export default function TrackCard({ track, onPlay }: { track: Track; onPlay: (track: Track) => void }) {
-  const coverUrl = track.coverArtCID ? `https://gateway.pinata.cloud/ipfs/${track.coverArtCID}` : "https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=500&auto=format&fit=crop";
+  const coverUrl = track.coverArtCID
+    ? track.coverArtCID.startsWith("http")
+      ? track.coverArtCID
+      : `https://gateway.pinata.cloud/ipfs/${track.coverArtCID}`
+    : "https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=500&auto=format&fit=crop";
 
   return (
     <div className="group relative rounded-2xl overflow-hidden bg-[#141414] border border-[#2a2a2a] hover:border-[#ff2a5f]/50 transition-all duration-300">

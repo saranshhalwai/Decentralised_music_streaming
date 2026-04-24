@@ -3,18 +3,15 @@
 import { useState, useEffect } from "react";
 import TrackCard from "@/components/TrackCard";
 import { Search, Flame } from "lucide-react";
-import { getWeb3Provider } from "@/lib/web3";
-import { ethers } from "ethers";
-import { MUSIC_REGISTRY_ADDRESS, MusicRegistryABI } from "@/lib/contracts";
+import { useAudioPlayer } from "@/context/AudioPlayerContext";
 
 export default function ExplorePage() {
   const [tracks, setTracks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const { setCurrentTrack, setIsPlaying } = useAudioPlayer();
 
   useEffect(() => {
-    // In a real app, we would fetch from the blockchain here.
-    // Since the deployment step is skipped, we provide mock data for the UI.
     const loadMockData = () => {
       setTracks([
         {
@@ -23,7 +20,8 @@ export default function ExplorePage() {
           artist_name: "Synthwave Master",
           genre: "Synthwave",
           ipfsCID: "",
-          coverArtCID: "",
+          coverArtCID: "https://images.unsplash.com/photo-1515378791036-0648a3ef77b2?q=80&w=500&auto=format&fit=crop",
+          src: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
           playCount: 1250,
         },
         {
@@ -32,7 +30,8 @@ export default function ExplorePage() {
           artist_name: "Byte Runner",
           genre: "Electronic",
           ipfsCID: "",
-          coverArtCID: "",
+          coverArtCID: "https://images.unsplash.com/photo-1499951360447-b19be8fe80f5?q=80&w=500&auto=format&fit=crop",
+          src: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3",
           playCount: 890,
         },
         {
@@ -41,7 +40,8 @@ export default function ExplorePage() {
           artist_name: "Crypto DJ",
           genre: "Hip Hop",
           ipfsCID: "",
-          coverArtCID: "",
+          coverArtCID: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?q=80&w=500&auto=format&fit=crop",
+          src: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3",
           playCount: 3420,
         },
         {
@@ -50,7 +50,8 @@ export default function ExplorePage() {
           artist_name: "Chill Nodes",
           genre: "Lofi",
           ipfsCID: "",
-          coverArtCID: "",
+          coverArtCID: "https://images.unsplash.com/photo-1494438639946-1ebd1d20bf85?q=80&w=500&auto=format&fit=crop",
+          src: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3",
           playCount: 560,
         }
       ]);
@@ -61,8 +62,8 @@ export default function ExplorePage() {
   }, []);
 
   const handlePlay = (track: any) => {
-    console.log("Playing track:", track.title);
-    // In a full implementation, this would trigger the global AudioPlayer context
+    setCurrentTrack(track);
+    setIsPlaying(true);
   };
 
   const filteredTracks = tracks.filter(t => 

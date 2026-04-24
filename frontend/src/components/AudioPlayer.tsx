@@ -1,56 +1,171 @@
 "use client";
 
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Play, Pause, SkipBack, SkipForward, Volume2, Maximize2 } from "lucide-react";
-import { useState } from "react";
+import { useAudioPlayer } from "@/context/AudioPlayerContext";
+
+const fallbackTrack = {
+  id: "sample",
+  title: "Demo BeatChain Track",
+  artist_name: "Sample Artist",
+  genre: "Sample",
+  coverArtCID: "",
+  src: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
+};
+
+function formatTime(seconds: number) {
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  return `${mins}:${secs.toString().padStart(2, "0")}`;
+}
 
 export default function AudioPlayer() {
-  const [isPlaying, setIsPlaying] = useState(false);
+  const { currentTrack, isPlaying, setIsPlaying, volume, setVolume } = useAudioPlayer();
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  const track = useMemo(() => currentTrack ?? fallbackTrack, [currentTrack]);
+  const coverUrl = track.coverArtCID
+    ? `https://gateway.pinata.cloud/ipfs/${track.coverArtCID}`
+    : "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?q=80&w=400&auto=format&fit=crop";
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    audio.volume = volume;
+  }, [volume]);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    const onTimeUpdate = () => setCurrentTime(audio.currentTime);
+    const onLoadedMetadata = () => setDuration(audio.duration);
+    const onEnded = () => setIsPlaying(false);
+
+    audio.addEventListener("timeupdate", onTimeUpdate);
+    audio.addEventListener("loadedmetadata", onLoadedMetadata);
+    audio.addEventListener("ended", onEnded);
+
+    return () => {
+      audio.removeEventListener("timeupdate", onTimeUpdate);
+      audio.removeEventListener("loadedmetadata", onLoadedMetadata);
+      audio.removeEventListener("ended", onEnded);
+    };
+  }, [setIsPlaying]);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    if (isPlaying) {
+      audio.play().catch(() => setIsPlaying(false));
+    } else {
+      audio.pause();
+    }
+  }, [isPlaying, setIsPlaying]);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    audio.load();
+    setCurrentTime(0);
+    setDuration(0);
+
+    if (currentTrack) {
+      audio.play().catch(() => setIsPlaying(false));
+      setIsPlaying(true);
+    }
+  }, [currentTrack, setIsPlaying]);
+
+  const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
+
+  const handleSeek = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    const nextTime = (Number(event.target.value) / 100) * duration;
+    audio.currentTime = nextTime;
+    setCurrentTime(nextTime);
+  };
 
   return (
     <div className="fixed bottom-0 w-full glass-panel border-t border-white/10 z-50 px-4 py-3">
-      <div className="max-w-7xl mx-auto flex items-center justify-between">
-        
-        <div className="flex items-center gap-4 w-1/4">
-          <div className="w-12 h-12 bg-gradient-to-tr from-[#ff2a5f] to-[#ff7e40] rounded-md shadow-lg flex items-center justify-center overflow-hidden">
-            <span className="text-xs font-bold text-white opacity-50">Cover</span>
+      <audio ref={audioRef} src={track.src ?? fallbackTrack.src} preload="metadata" />
+      <div className="max-w-7xl mx-auto flex flex-col gap-3 md:flex-row items-center justify-between">
+        <div className="flex items-center gap-4 w-full md:w-1/4">
+          <div className="w-12 h-12 bg-gradient-to-tr from-[#ff2a5f] to-[#ff7e40] rounded-md shadow-lg overflow-hidden">
+            <img src={coverUrl} alt="Cover art" className="w-full h-full object-cover" />
           </div>
           <div>
-            <h4 className="text-sm font-bold text-white line-clamp-1">Track Name</h4>
-            <p className="text-xs text-gray-400">Artist</p>
+            <h4 className="text-sm font-bold text-white line-clamp-1">{track.title}</h4>
+            <p className="text-xs text-gray-400">{track.artist_name}</p>
           </div>
         </div>
 
-        <div className="flex flex-col items-center flex-1 max-w-xl">
-          <div className="flex items-center gap-6 mb-2">
-            <button className="text-gray-400 hover:text-white transition-colors">
+        <div className="flex flex-col items-center flex-1 max-w-xl w-full">
+          <div className="flex items-center gap-6 mb-3">
+            <button
+              className="text-gray-400 hover:text-white transition-colors"
+              onClick={() => {
+                const audio = audioRef.current;
+                if (!audio) return;
+                audio.currentTime = Math.max(audio.currentTime - 10, 0);
+              }}
+            >
               <SkipBack className="w-5 h-5 fill-current" />
             </button>
-            <button 
+            <button
               onClick={() => setIsPlaying(!isPlaying)}
               className="w-10 h-10 rounded-full bg-white text-black flex items-center justify-center hover:scale-105 transition-transform"
             >
               {isPlaying ? <Pause className="w-5 h-5 fill-current" /> : <Play className="w-5 h-5 fill-current ml-1" />}
             </button>
-            <button className="text-gray-400 hover:text-white transition-colors">
+            <button
+              className="text-gray-400 hover:text-white transition-colors"
+              onClick={() => {
+                const audio = audioRef.current;
+                if (!audio) return;
+                audio.currentTime = Math.min(audio.currentTime + 10, duration || audio.duration || 0);
+              }}
+            >
               <SkipForward className="w-5 h-5 fill-current" />
             </button>
           </div>
-          
+
           <div className="w-full flex items-center gap-3">
-            <span className="text-xs text-gray-500 font-medium">1:24</span>
-            <div className="h-1 bg-[#2a2a2a] rounded-full flex-1 relative cursor-pointer group">
-              <div className="absolute top-0 left-0 h-full bg-[#ff2a5f] w-1/3 rounded-full group-hover:bg-[#ff7e40] transition-colors"></div>
-              <div className="absolute top-1/2 -translate-y-1/2 left-1/3 w-3 h-3 bg-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-md"></div>
+            <span className="text-xs text-gray-500 font-medium">{formatTime(currentTime)}</span>
+            <div className="flex-1">
+              <input
+                aria-label="Track progress"
+                type="range"
+                min={0}
+                max={100}
+                value={progress}
+                onChange={handleSeek}
+                className="w-full h-2 bg-[#2a2a2a] appearance-none rounded-full accent-[#ff2a5f] cursor-pointer"
+              />
             </div>
-            <span className="text-xs text-gray-500 font-medium">3:45</span>
+            <span className="text-xs text-gray-500 font-medium">{formatTime(duration || 0)}</span>
           </div>
         </div>
 
-        <div className="flex items-center justify-end gap-4 w-1/4 text-gray-400">
-          <Volume2 className="w-5 h-5 hover:text-white cursor-pointer transition-colors" />
-          <div className="w-24 h-1 bg-[#2a2a2a] rounded-full cursor-pointer relative group hidden md:block">
-            <div className="absolute top-0 left-0 h-full bg-white w-2/3 rounded-full"></div>
+        <div className="flex items-center justify-end gap-3 w-full md:w-1/4 text-gray-400">
+          <div className="flex items-center gap-3">
+            <Volume2 className="w-5 h-5 hover:text-white cursor-pointer transition-colors" />
+            <input
+              aria-label="Volume"
+              type="range"
+              min={0}
+              max={1}
+              step={0.01}
+              value={volume}
+              onChange={(event) => setVolume(Number(event.target.value))}
+              className="w-24 md:w-32 h-2 accent-[#ff2a5f] cursor-pointer"
+            />
           </div>
+          <div className="hidden md:block text-xs text-gray-400">Vol {(volume * 100).toFixed(0)}%</div>
           <Maximize2 className="w-4 h-4 hover:text-white cursor-pointer transition-colors ml-2" />
         </div>
       </div>
