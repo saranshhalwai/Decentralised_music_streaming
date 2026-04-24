@@ -2,6 +2,7 @@
 pragma solidity ^0.8.28;
 
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "./MusicRegistry.sol";
 
 /// @title Payment
 /// @notice Handles artist tips and per-stream micro-payments.
@@ -10,6 +11,8 @@ contract Payment is ReentrancyGuard {
     // -------------------------------------------------------------------------
     // State
     // -------------------------------------------------------------------------
+
+    MusicRegistry public registry;
 
     /// artist address => unclaimed ETH balance (in wei)
     mapping(address => uint256) private _earnings;
@@ -49,6 +52,14 @@ contract Payment is ReentrancyGuard {
     error TransferFailed();
 
     // -------------------------------------------------------------------------
+    // Constructor
+    // -------------------------------------------------------------------------
+
+    constructor(address _registryAddress) {
+        registry = MusicRegistry(_registryAddress);
+    }
+
+    // -------------------------------------------------------------------------
     // Mutating functions
     // -------------------------------------------------------------------------
 
@@ -65,14 +76,16 @@ contract Payment is ReentrancyGuard {
 
     /// @notice Pay for a stream (micro-payment). The full msg.value goes to the artist.
     /// @param trackId  The ID of the track being streamed.
-    /// @param artist   The artist's wallet address.
-    function streamPayment(uint256 trackId, address artist) external payable {
-        if (msg.value == 0)       revert ZeroValue();
-        if (artist == address(0)) revert ZeroAddress();
+    function streamPayment(uint256 trackId) external payable {
+        if (msg.value == 0) revert ZeroValue();
+        
+        // Fetch the artist securely from the registry
+        address artist = registry.getTrack(trackId).artist;
 
         _earnings[artist] += msg.value;
         trackEarnings[trackId] += msg.value;
         totalPlatformPayments += msg.value;
+        
         emit StreamPayment(msg.sender, trackId, artist, msg.value);
     }
 
