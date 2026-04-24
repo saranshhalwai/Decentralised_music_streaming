@@ -1,16 +1,9 @@
 "use client";
 
 import { createContext, ReactNode, useContext, useMemo, useState } from "react";
+import { Track as SharedTrack } from "@/lib/mockData";
 
-export interface Track {
-  id: string;
-  title: string;
-  artist_name: string;
-  genre: string;
-  ipfsCID?: string;
-  coverArtCID?: string;
-  src?: string;
-}
+export type Track = SharedTrack;
 
 interface AudioPlayerContextValue {
   currentTrack: Track | null;

@@ -7,7 +7,7 @@ import { useAudioPlayer } from "@/context/AudioPlayerContext";
 const fallbackTrack = {
   id: "sample",
   title: "Demo BeatChain Track",
-  artist_name: "Sample Artist",
+  artists: ["Sample Artist"],
   genre: "Sample",
   coverArtCID: "",
   src: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
@@ -100,7 +100,7 @@ export default function AudioPlayer() {
           </div>
           <div>
             <h4 className="text-sm font-bold text-white line-clamp-1">{track.title}</h4>
-            <p className="text-xs text-gray-400">{track.artist_name}</p>
+            <p className="text-xs text-gray-400">{track.artists?.join(", ") || "Unknown Artist"}</p>
           </div>
         </div>
 

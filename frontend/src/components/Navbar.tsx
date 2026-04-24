@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState, useEffect } from "react";
-import { Music, Wallet, Home, Compass, User, LayoutDashboard } from "lucide-react";
+import { Music, Wallet, Home, Compass, User, Users, LayoutDashboard } from "lucide-react";
 import { getWeb3Provider, formatAddress } from "@/lib/web3";
 
 export default function Navbar() {
@@ -11,8 +11,9 @@ export default function Navbar() {
   useEffect(() => {
     // Check if wallet is already connected
     const checkConnection = async () => {
-      if (window.ethereum) {
-        const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+      const ethereum = (window as any).ethereum;
+      if (ethereum) {
+        const accounts = await ethereum.request({ method: 'eth_accounts' });
         if (accounts.length > 0) {
           setAddress(accounts[0]);
         }
@@ -46,6 +47,7 @@ export default function Navbar() {
             <div className="hidden md:flex items-center space-x-1">
               <NavLink href="/" icon={<Home className="w-4 h-4" />} text="Home" />
               <NavLink href="/explore" icon={<Compass className="w-4 h-4" />} text="Explore" />
+              <NavLink href="/artists" icon={<Users className="w-4 h-4" />} text="Artists" />
               <NavLink href="/dashboard" icon={<LayoutDashboard className="w-4 h-4" />} text="Artist" />
             </div>
           </div>
