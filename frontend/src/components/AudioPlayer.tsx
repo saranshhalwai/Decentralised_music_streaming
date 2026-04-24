@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, useCallback, useRef } from "react";
-import { Play, Pause, SkipBack, SkipForward, Volume2, Maximize2, AlertCircle, Loader2, ExternalLink } from "lucide-react";
+import { Play, Pause, SkipBack, SkipForward, Volume2, Maximize2, AlertCircle, Loader2, ExternalLink, ShieldCheck } from "lucide-react";
 import { useAudioPlayer } from "@/context/AudioPlayerContext";
 import { getWeb3Provider } from "@/lib/web3";
 import { getPaymentContract, PAYMENT_ADDRESS } from "@/lib/contracts";
@@ -42,6 +42,7 @@ export default function AudioPlayer() {
   const [duration, setDuration] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isAwaitingPayment, setIsAwaitingPayment] = useState(false);
   const [gatewayIndex, setGatewayIndex] = useState(0);
   
   // Track tracking to avoid cascades
@@ -53,7 +54,6 @@ export default function AudioPlayer() {
   const activeSrc = useMemo(() => {
     if (!currentTrack || currentTrack.id === "sample") return fallbackTrack.src;
     if (!currentTrack.ipfsCID) return "";
-    // Add a filename hint to help with MIME type detection
     return `${GATEWAYS[gatewayIndex]}${currentTrack.ipfsCID}?filename=track.mp3`;
   }, [currentTrack, gatewayIndex]);
 
@@ -62,9 +62,8 @@ export default function AudioPlayer() {
     const audio = audioRef.current;
     if (!audio) return;
 
-    if (isPlaying) {
+    if (isPlaying && !isAwaitingPayment) {
       if (audio.src && audio.src !== window.location.href) {
-        // Explicitly load the source to clear any previous error state
         if (audio.readyState === 0) audio.load();
         
         audio.play().catch(err => {
@@ -73,7 +72,6 @@ export default function AudioPlayer() {
             
             if (gatewayIndex < GATEWAYS.length - 1) {
               setError(`Gateway ${gatewayIndex + 1} slow, switching...`);
-              // Use a timeout to avoid rapid-fire switching
               setTimeout(() => {
                 setGatewayIndex(prev => prev + 1);
                 audio.load();
@@ -88,15 +86,50 @@ export default function AudioPlayer() {
     } else {
       audio.pause();
     }
-  }, [isPlaying, activeSrc, gatewayIndex, audioRef, setIsPlaying]);
+  }, [isPlaying, isAwaitingPayment, activeSrc, gatewayIndex, audioRef, setIsPlaying]);
 
-  // Track Change logic - use a ref to prevent cascade
+  const triggerPayment = useCallback(async (trackId: string) => {
+    try {
+      if (trackId === "sample") return true;
+      if (!PAYMENT_ADDRESS || PAYMENT_ADDRESS.startsWith("0x0000")) return true;
+
+      setIsAwaitingPayment(true);
+      setError("Please confirm the stream payment (0.0001 ETH) in MetaMask...");
+
+      const { signer } = await getWeb3Provider();
+      const paymentContract = getPaymentContract(signer);
+      const streamFee = ethers.parseEther("0.0001");
+      
+      console.log("Requesting stream payment for track:", trackId);
+      const tx = await paymentContract.streamPayment(BigInt(trackId), { value: streamFee });
+      
+      console.log("Payment transaction sent:", tx.hash);
+      setError("Payment confirmed! Loading track...");
+      setIsAwaitingPayment(false);
+      return true;
+    } catch (err: unknown) {
+      const error = err as EthersError;
+      setIsAwaitingPayment(false);
+      if (error.code === "ACTION_REJECTED") {
+        setError("Payment required to stream this track.");
+      } else {
+        console.error("Stream payment failed:", error);
+        setError("Payment failed. Please check your balance and try again.");
+      }
+      setIsPlaying(false);
+      return false;
+    }
+  }, [setIsPlaying]);
+
+  // Track Change logic
   useEffect(() => {
     if (currentTrack?.id && currentTrack.id !== lastTrackId.current) {
       lastTrackId.current = currentTrack.id;
       
-      // Wrap in timeout to defer state updates out of the render cycle
-      setTimeout(() => {
+      // Stop current playback while we process
+      setIsPlaying(false);
+      
+      setTimeout(async () => {
         setError(null);
         setGatewayIndex(0);
         setCurrentTime(0);
@@ -104,11 +137,16 @@ export default function AudioPlayer() {
         
         if (currentTrack.id !== "sample") {
           setIsLoading(true);
-          setIsPlaying(true);
+          const paymentSuccessful = await triggerPayment(currentTrack.id);
+          if (paymentSuccessful) {
+            setIsPlaying(true);
+          }
+        } else {
+           setIsPlaying(true);
         }
       }, 0);
     }
-  }, [currentTrack, setIsPlaying]);
+  }, [currentTrack, setIsPlaying, triggerPayment]);
 
   // Volume control
   useEffect(() => {
@@ -124,9 +162,9 @@ export default function AudioPlayer() {
 
   const onLoadedMetadata = useCallback(() => {
     setIsLoading(false);
-    setError(null);
+    if (!isAwaitingPayment) setError(null);
     if (audioRef.current) setDuration(audioRef.current.duration);
-  }, [audioRef]);
+  }, [audioRef, isAwaitingPayment]);
 
   const onEnded = useCallback(() => {
     setIsPlaying(false);
@@ -142,32 +180,10 @@ export default function AudioPlayer() {
     }
   }, [gatewayIndex, setIsPlaying]);
 
-  const triggerPayment = useCallback(async (trackId: string) => {
-    try {
-      if (trackId === "sample") return;
-      if (!PAYMENT_ADDRESS || PAYMENT_ADDRESS.startsWith("0x0000")) return;
-
-      const { signer } = await getWeb3Provider();
-      const paymentContract = getPaymentContract(signer);
-      const streamFee = ethers.parseEther("0.0001");
-      
-      console.log("Sending stream payment for track:", trackId);
-      await paymentContract.streamPayment(BigInt(trackId), { value: streamFee });
-    } catch (err: unknown) {
-      const error = err as EthersError;
-      if (error.code !== "ACTION_REJECTED") {
-        console.error("Stream payment failed:", error);
-      }
-    }
-  }, []);
-
   const onCanPlay = useCallback(() => {
     setIsLoading(false);
-    setError(null);
-    if (currentTrack) {
-      triggerPayment(currentTrack.id);
-    }
-  }, [currentTrack, triggerPayment]);
+    if (!isAwaitingPayment) setError(null);
+  }, [isAwaitingPayment]);
 
   return (
     <div className="fixed bottom-0 w-full glass-panel border-t border-white/10 z-50 px-4 py-3">
@@ -195,7 +211,7 @@ export default function AudioPlayer() {
               sizes="48px"
               className="object-cover" 
             />
-            {isLoading && (
+            {(isLoading || isAwaitingPayment) && (
               <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
                 <Loader2 className="w-6 h-6 text-white animate-spin" />
               </div>
@@ -230,10 +246,21 @@ export default function AudioPlayer() {
             </button>
             
             <button
+              disabled={isAwaitingPayment}
               onClick={() => setIsPlaying(!isPlaying)}
-              className="w-10 h-10 rounded-full bg-white text-black flex items-center justify-center hover:scale-105 transition-transform"
+              className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
+                isAwaitingPayment 
+                ? "bg-gray-600 cursor-wait" 
+                : "bg-white text-black hover:scale-105 active:scale-95"
+              }`}
             >
-              {isPlaying ? <Pause className="w-5 h-5 fill-current" /> : <Play className="w-5 h-5 fill-current ml-1" />}
+              {isAwaitingPayment ? (
+                <ShieldCheck className="w-5 h-5 text-white animate-pulse" />
+              ) : isPlaying ? (
+                <Pause className="w-5 h-5 fill-current" />
+              ) : (
+                <Play className="w-5 h-5 fill-current ml-1" />
+              )}
             </button>
             
             <button
@@ -264,8 +291,10 @@ export default function AudioPlayer() {
                 className="w-full h-2 bg-[#2a2a2a] appearance-none rounded-full accent-[#ff2a5f] cursor-pointer"
               />
               {error && (
-                <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-[#ff2a5f] text-white text-[10px] px-2 py-1 rounded flex items-center gap-1 whitespace-nowrap shadow-lg">
-                  {gatewayIndex < GATEWAYS.length - 1 && isLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <AlertCircle className="w-3 h-3" />}
+                <div className={`absolute -top-8 left-1/2 -translate-x-1/2 text-white text-[10px] px-2 py-1 rounded flex items-center gap-1 whitespace-nowrap shadow-lg ${
+                  isAwaitingPayment ? "bg-blue-600 animate-pulse" : "bg-[#ff2a5f]"
+                }`}>
+                  {isAwaitingPayment ? <ShieldCheck className="w-3 h-3" /> : <AlertCircle className="w-3 h-3" />}
                   {error}
                 </div>
               )}
