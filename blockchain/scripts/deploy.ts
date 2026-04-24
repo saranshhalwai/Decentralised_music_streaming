@@ -1,13 +1,15 @@
-import hre from "hardhat";
+import { network } from "hardhat";
 
 async function main() {
-  console.log("🚀 Deploying contracts to", hre.network.name, "...\n");
+  const { ethers } = await network.connect();
+  
+  console.log("🚀 Deploying contracts to", network.name, "...\n");
 
-  const [deployer] = await hre.ethers.getSigners();
+  const [deployer] = await ethers.getSigners();
   console.log("Deployer address:", deployer.address);
   console.log(
     "Deployer balance:",
-    hre.ethers.formatEther(await hre.ethers.provider.getBalance(deployer.address)),
+    ethers.formatEther(await ethers.provider.getBalance(deployer.address)),
     "ETH\n"
   );
 
@@ -15,7 +17,7 @@ async function main() {
   // 1. MusicRegistry
   // ------------------------------------------------------------------
   console.log("Deploying MusicRegistry...");
-  const MusicRegistry = await hre.ethers.getContractFactory("MusicRegistry");
+  const MusicRegistry = await ethers.getContractFactory("MusicRegistry");
   const musicRegistry = await MusicRegistry.deploy();
   await musicRegistry.waitForDeployment();
   const registryAddress = await musicRegistry.getAddress();
@@ -25,7 +27,7 @@ async function main() {
   // 2. Payment
   // ------------------------------------------------------------------
   console.log("\nDeploying Payment...");
-  const Payment = await hre.ethers.getContractFactory("Payment");
+  const Payment = await ethers.getContractFactory("Payment");
   const payment = await Payment.deploy(registryAddress);
   await payment.waitForDeployment();
   const paymentAddress = await payment.getAddress();
@@ -35,7 +37,7 @@ async function main() {
   // 3. MusicNFT
   // ------------------------------------------------------------------
   console.log("\nDeploying MusicNFT...");
-  const MusicNFT = await hre.ethers.getContractFactory("MusicNFT");
+  const MusicNFT = await ethers.getContractFactory("MusicNFT");
   const musicNFT = await MusicNFT.deploy(registryAddress);
   await musicNFT.waitForDeployment();
   const nftAddress = await musicNFT.getAddress();
@@ -47,7 +49,7 @@ async function main() {
   console.log("\n========================================");
   console.log("📋 Deployment Summary");
   console.log("========================================");
-  console.log(`Network:        ${hre.network.name}`);
+  console.log(`Network:        ${network.name}`);
   console.log(`MusicRegistry:  ${registryAddress}`);
   console.log(`Payment:        ${paymentAddress}`);
   console.log(`MusicNFT:       ${nftAddress}`);
