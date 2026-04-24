@@ -25,6 +25,7 @@ export const uploadFileToIPFS = async (file: File) => {
 };
 
 export const getIPFSUrl = (cid: string) => {
-  if (!cid) return '';
-  return `https://gateway.pinata.cloud/ipfs/${cid}`;
+  if (!cid || cid === "") return null;
+  // Cloudflare is usually much faster for public media streaming
+  return `https://cloudflare-ipfs.com/ipfs/${cid}`;
 };

@@ -8,6 +8,7 @@ import { getMusicRegistryContract } from "@/lib/contracts";
 
 export default function Dashboard() {
   const [title, setTitle] = useState("");
+  const [artistName, setArtistName] = useState("");
   const [genre, setGenre] = useState("");
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [coverFile, setCoverFile] = useState<File | null>(null);
@@ -16,7 +17,7 @@ export default function Dashboard() {
 
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!audioFile || !coverFile || !title || !genre) {
+    if (!audioFile || !coverFile || !title || !artistName || !genre) {
       setStatus("Please fill all fields and select both files.");
       return;
     }
@@ -37,13 +38,14 @@ export default function Dashboard() {
       const { signer } = await getWeb3Provider();
       const registry = getMusicRegistryContract(signer);
       
-      const tx = await registry.uploadTrack(title, genre, audioCid, coverCid);
+      const tx = await registry.uploadTrack(title, artistName, genre, audioCid, coverCid);
       setStatus("Transaction pending... Please wait.");
       await tx.wait();
 
       setStatus("Success! Track has been published to BeatChain.");
       setIsUploading(false);
       setTitle("");
+      setArtistName("");
       setGenre("");
       setAudioFile(null);
       setCoverFile(null);
@@ -77,21 +79,32 @@ export default function Dashboard() {
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-300">Genre</label>
-              <select 
-                value={genre}
-                onChange={(e) => setGenre(e.target.value)}
-                className="w-full bg-[#0d0d0d] border border-[#2a2a2a] rounded-xl px-4 py-3 focus:outline-none focus:border-[#ff2a5f] transition-colors text-white"
-              >
-                <option value="">Select Genre</option>
-                <option value="Electronic">Electronic</option>
-                <option value="Hip Hop">Hip Hop</option>
-                <option value="Pop">Pop</option>
-                <option value="Rock">Rock</option>
-                <option value="Synthwave">Synthwave</option>
-                <option value="Lofi">Lofi</option>
-              </select>
+              <label className="text-sm font-medium text-gray-300">Artist Name</label>
+              <input 
+                type="text" 
+                value={artistName}
+                onChange={(e) => setArtistName(e.target.value)}
+                className="w-full bg-[#0d0d0d] border border-[#2a2a2a] rounded-xl px-4 py-3 focus:outline-none focus:border-[#ff2a5f] transition-colors"
+                placeholder="e.g. DJ Ether"
+              />
             </div>
+          </div>
+          
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-300">Genre</label>
+            <select 
+              value={genre}
+              onChange={(e) => setGenre(e.target.value)}
+              className="w-full bg-[#0d0d0d] border border-[#2a2a2a] rounded-xl px-4 py-3 focus:outline-none focus:border-[#ff2a5f] transition-colors text-white"
+            >
+              <option value="">Select Genre</option>
+              <option value="Electronic">Electronic</option>
+              <option value="Hip Hop">Hip Hop</option>
+              <option value="Pop">Pop</option>
+              <option value="Rock">Rock</option>
+              <option value="Synthwave">Synthwave</option>
+              <option value="Lofi">Lofi</option>
+            </select>
           </div>
 
           <div className="grid md:grid-cols-2 gap-6 pt-4">

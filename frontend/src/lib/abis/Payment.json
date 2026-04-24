@@ -128,11 +128,6 @@
           "internalType": "uint256",
           "name": "trackId",
           "type": "uint256"
-        },
-        {
-          "internalType": "address",
-          "name": "artist",
-          "type": "address"
         }
       ],
       "name": "streamPayment",

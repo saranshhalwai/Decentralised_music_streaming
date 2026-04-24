@@ -1,24 +1,16 @@
 "use client";
 
-import { createContext, ReactNode, useContext, useMemo, useState } from "react";
-
-export interface Track {
-  id: string;
-  title: string;
-  artist_name: string;
-  genre: string;
-  ipfsCID?: string;
-  coverArtCID?: string;
-  src?: string;
-}
+import { createContext, ReactNode, useContext, useMemo, useRef, useState } from "react";
+import { Track } from "@/types/track";
 
 interface AudioPlayerContextValue {
   currentTrack: Track | null;
-  setCurrentTrack: (track: Track) => void;
+  setCurrentTrack: (track: Track | null) => void;
   isPlaying: boolean;
   setIsPlaying: (value: boolean) => void;
   volume: number;
   setVolume: (value: number) => void;
+  audioRef: React.RefObject<HTMLAudioElement | null>;
 }
 
 const AudioPlayerContext = createContext<AudioPlayerContextValue | undefined>(undefined);
@@ -27,9 +19,10 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
   const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolume] = useState(0.65);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const value = useMemo(
-    () => ({ currentTrack, setCurrentTrack, isPlaying, setIsPlaying, volume, setVolume }),
+    () => ({ currentTrack, setCurrentTrack, isPlaying, setIsPlaying, volume, setVolume, audioRef }),
     [currentTrack, isPlaying, volume]
   );
 
