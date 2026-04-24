@@ -23,10 +23,10 @@ const fallbackTrack = {
 };
 
 const GATEWAYS = [
+  "https://gateway.pinata.cloud/ipfs/",
   "https://cloudflare-ipfs.com/ipfs/",
   "https://ipfs.io/ipfs/",
-  "https://dweb.link/ipfs/",
-  "https://gateway.pinata.cloud/ipfs/"
+  "https://dweb.link/ipfs/"
 ];
 
 function formatTime(seconds: number) {
@@ -53,7 +53,8 @@ export default function AudioPlayer() {
   const activeSrc = useMemo(() => {
     if (!currentTrack || currentTrack.id === "sample") return fallbackTrack.src;
     if (!currentTrack.ipfsCID) return "";
-    return `${GATEWAYS[gatewayIndex]}${currentTrack.ipfsCID}`;
+    // Add a filename hint to help with MIME type detection
+    return `${GATEWAYS[gatewayIndex]}${currentTrack.ipfsCID}?filename=track.mp3`;
   }, [currentTrack, gatewayIndex]);
 
   // Unified Playback Control
@@ -63,13 +64,20 @@ export default function AudioPlayer() {
 
     if (isPlaying) {
       if (audio.src && audio.src !== window.location.href) {
+        // Explicitly load the source to clear any previous error state
+        if (audio.readyState === 0) audio.load();
+        
         audio.play().catch(err => {
           if (err.name !== "AbortError") {
             console.error("Playback error:", err.name, activeSrc);
             
             if (gatewayIndex < GATEWAYS.length - 1) {
               setError(`Gateway ${gatewayIndex + 1} slow, switching...`);
-              setGatewayIndex(prev => prev + 1);
+              // Use a timeout to avoid rapid-fire switching
+              setTimeout(() => {
+                setGatewayIndex(prev => prev + 1);
+                audio.load();
+              }, 500);
             } else {
               setError("All IPFS gateways failed to serve this file.");
               setIsPlaying(false);
@@ -183,6 +191,8 @@ export default function AudioPlayer() {
               src={track.coverUrl || fallbackTrack.coverUrl} 
               alt="Cover" 
               fill
+              unoptimized
+              sizes="48px"
               className="object-cover" 
             />
             {isLoading && (

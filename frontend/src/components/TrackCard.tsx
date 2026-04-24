@@ -16,6 +16,8 @@ export default function TrackCard({ track, onPlay }: { track: Track; onPlay: (tr
           src={coverUrl} 
           alt={track.title} 
           fill
+          unoptimized
+          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
           className="object-cover group-hover:scale-105 transition-transform duration-500"
         />
         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
