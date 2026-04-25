@@ -26,6 +26,6 @@ export const uploadFileToIPFS = async (file: File) => {
 
 export const getIPFSUrl = (cid: string) => {
   if (!cid || cid === "") return "";
-  // Cloudflare is usually much faster for public media streaming
-  return `https://cloudflare-ipfs.com/ipfs/${cid}`;
+  const gateway = process.env.NEXT_PUBLIC_IPFS_GATEWAY || "cloudflare-ipfs.com";
+  return `https://${gateway}/ipfs/${cid}`;
 };

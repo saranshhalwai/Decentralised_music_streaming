@@ -23,6 +23,10 @@ const nextConfig: NextConfig = {
         protocol: 'https',
         hostname: 'gateway.pinata.cloud',
       },
+      {
+        protocol: 'https',
+        hostname: 'moccasin-used-whale-525.mypinata.cloud',
+      },
     ],
   },
 };
