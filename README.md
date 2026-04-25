@@ -1,57 +1,234 @@
-# Sample Hardhat 3 Beta Project (`mocha` and `ethers`)
+# BeatChain — Decentralised Music Streaming
 
-This project showcases a Hardhat 3 Beta project using `mocha` for tests and the `ethers` library for Ethereum interactions.
+A full-stack **Web3 music streaming platform** built on Ethereum (Sepolia testnet). Artists upload their tracks to IPFS, register them on-chain, and receive direct ETH payments and tips from fans — with zero intermediaries. Fans can also collect exclusive music NFTs.
 
-To learn more about the Hardhat 3 Beta, please visit the [Getting Started guide](https://hardhat.org/docs/getting-started#getting-started-with-hardhat-3). To share your feedback, join our [Hardhat 3 Beta](https://hardhat.org/hardhat3-beta-telegram-group) Telegram group or [open an issue](https://github.com/NomicFoundation/hardhat/issues/new) in our GitHub issue tracker.
+---
 
-## Project Overview
+## Architecture Overview
 
-This example project includes:
+```
+Decentralised_music_streaming/
+├── blockchain/          # Hardhat 3 project (smart contracts + tests + deploy)
+│   ├── contracts/
+│   │   ├── MusicRegistry.sol   # On-chain music catalog
+│   │   ├── Payment.sol         # Tips & per-stream micro-payments
+│   │   └── MusicNFT.sol        # ERC-721 collectibles with ERC-2981 royalties
+│   ├── scripts/
+│   │   └── deploy.ts           # Sequential deployment script
+│   ├── test/
+│   │   ├── MusicRegistry.ts
+│   │   ├── Payment.ts
+│   │   └── MusicNFT.ts
+│   └── hardhat.config.ts
+└── frontend/            # Next.js 16 + Tailwind CSS frontend
+    └── src/
+        ├── app/         # Pages: /, /explore, /dashboard, /profile, /track
+        ├── components/  # AudioPlayer, Navbar, TrackCard
+        ├── context/     # AudioPlayerContext (global audio state)
+        └── lib/
+            ├── web3.ts         # MetaMask / BrowserProvider integration
+            ├── contracts.ts    # Contract factory helpers
+            ├── ipfs.ts         # Pinata upload & Cloudflare IPFS gateway
+            └── abis/           # Compiled JSON ABIs
+```
 
-- A simple Hardhat configuration file.
-- Foundry-compatible Solidity unit tests.
-- TypeScript integration tests using `mocha` and ethers.js
-- Examples demonstrating how to connect to different types of networks, including locally simulating OP mainnet.
+---
 
-## Usage
+## Smart Contracts
 
-### Running Tests
+| Contract | Description |
+|---|---|
+| **MusicRegistry** | On-chain catalog of tracks. Artists call `uploadTrack()` with IPFS CIDs; anyone can call `incrementPlayCount()`. |
+| **Payment** | Accepts ETH via `tipArtist()` and `streamPayment()`. Artists `withdrawEarnings()` at will. Protected by OpenZeppelin `ReentrancyGuard`. |
+| **MusicNFT** | ERC-721 collectible NFTs linked to registry tracks. Implements ERC-2981 royalty standard. Artists mint with `mintCollectible()`. |
 
-To run all the tests in the project, execute the following command:
+> **Security:** `Payment` uses the checks-effects-interactions pattern alongside `ReentrancyGuard`. `MusicNFT` verifies track ownership via the registry before minting.
 
-```shell
+---
+
+## Tech Stack
+
+**Blockchain**
+- [Hardhat 3 Beta](https://hardhat.org/docs/getting-started) — build, test, deploy
+- Solidity `^0.8.28`
+- OpenZeppelin Contracts `^5.6.1` (ERC-721, ERC-2981, ReentrancyGuard)
+- ethers.js `^6`
+- Mocha + Chai (TypeScript integration tests)
+
+**Frontend**
+- Next.js `16` (App Router)
+- React `19`
+- Tailwind CSS `^4`
+- ethers.js `^6` — wallet & contract interactions
+- Pinata SDK — IPFS uploads
+- MetaMask — browser wallet (Sepolia testnet)
+
+---
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js `>=18`
+- npm `>=9`
+- [MetaMask](https://metamask.io/) browser extension
+- A Sepolia RPC URL (e.g., from [Alchemy](https://alchemy.com) or [Infura](https://infura.io))
+- A [Pinata](https://app.pinata.cloud/) account for IPFS uploads (free tier works)
+
+---
+
+### 1. Clone the Repository
+
+```bash
+git clone https://github.com/saranshhalwai/Decentralised_music_streaming.git
+cd Decentralised_music_streaming
+```
+
+---
+
+### 2. Blockchain Setup
+
+```bash
+cd blockchain
+npm install
+```
+
+Copy the environment file and fill in your values:
+
+```bash
+cp .env.example .env
+```
+
+Edit `blockchain/.env`:
+
+```
+SEPOLIA_RPC_URL=https://eth-sepolia.g.alchemy.com/v2/YOUR_KEY
+SEPOLIA_PRIVATE_KEY=0xYOUR_WALLET_PRIVATE_KEY
+```
+
+#### Run Tests
+
+```bash
+# Run all tests (Solidity + Mocha)
 npx hardhat test
-```
 
-You can also selectively run the Solidity or `mocha` tests:
-
-```shell
-npx hardhat test solidity
+# Run only TypeScript/Mocha tests
 npx hardhat test mocha
+
+# Run only Solidity tests
+npx hardhat test solidity
 ```
 
-### Make a deployment to Sepolia
+#### Deploy Contracts
 
-This project includes an example Ignition module to deploy the contract. You can deploy this module to a locally simulated chain or to Sepolia.
-
-To run the deployment to a local chain:
-
-```shell
-npx hardhat ignition deploy ignition/modules/Counter.ts
+**Local (simulated chain):**
+```bash
+npx hardhat run scripts/deploy.ts
 ```
 
-To run the deployment to Sepolia, you need an account with funds to send the transaction. The provided Hardhat configuration includes a Configuration Variable called `SEPOLIA_PRIVATE_KEY`, which you can use to set the private key of the account you want to use.
-
-You can set the `SEPOLIA_PRIVATE_KEY` variable using the `hardhat-keystore` plugin or by setting it as an environment variable.
-
-To set the `SEPOLIA_PRIVATE_KEY` config variable using `hardhat-keystore`:
-
-```shell
-npx hardhat keystore set SEPOLIA_PRIVATE_KEY
+**Sepolia Testnet:**
+```bash
+npx hardhat run scripts/deploy.ts --network sepolia
 ```
 
-After setting the variable, you can run the deployment with the Sepolia network:
-
-```shell
-npx hardhat ignition deploy --network sepolia ignition/modules/Counter.ts
+After deployment you will see a summary like:
 ```
+✅ MusicRegistry deployed to: 0x...
+✅ Payment deployed to:       0x...
+✅ MusicNFT deployed to:      0x...
+```
+
+> **Copy these addresses** — you'll need them for the frontend `.env`.
+
+---
+
+### 3. Frontend Setup
+
+```bash
+cd ../frontend
+npm install
+```
+
+Copy the environment file:
+
+```bash
+cp .env.example .env.local
+```
+
+Edit `frontend/.env.local` with the contract addresses from the deployment step and your Pinata JWT:
+
+```
+NEXT_PUBLIC_MUSIC_REGISTRY_ADDRESS=0x...
+NEXT_PUBLIC_PAYMENT_ADDRESS=0x...
+NEXT_PUBLIC_MUSIC_NFT_ADDRESS=0x...
+NEXT_PUBLIC_PINATA_JWT=eyJ...
+```
+
+#### Run Development Server
+
+```bash
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+---
+
+## Application Pages
+
+| Route | Description |
+|---|---|
+| `/` | Landing page — hero, features overview |
+| `/explore` | Browse all tracks registered on-chain |
+| `/dashboard` | Artist dashboard — upload tracks, mint NFTs, view earnings |
+| `/profile` | View your uploaded tracks and NFT collectibles |
+| `/track/[id]` | Individual track page — stream, tip artist, pay per-stream |
+
+---
+
+## Running Tests
+
+All tests are located in `blockchain/test/`.
+
+```bash
+cd blockchain
+
+# Full test suite
+npx hardhat test
+
+# Individual contract tests
+npx hardhat test mocha --grep "MusicRegistry"
+npx hardhat test mocha --grep "Payment"
+npx hardhat test mocha --grep "MusicNFT"
+```
+
+Test coverage includes:
+- Track upload validation (empty field guards)
+- Play count incrementing
+- Tip and stream payment flows
+- Reentrancy attack prevention
+- NFT minting, royalty setting, and burning
+- Access control (only track owners can mint NFTs)
+
+---
+
+## Environment Variables Reference
+
+### `blockchain/.env`
+
+| Variable | Description |
+|---|---|
+| `SEPOLIA_RPC_URL` | RPC endpoint for Sepolia (Alchemy/Infura) |
+| `SEPOLIA_PRIVATE_KEY` | Private key of deployer wallet (with `0x` prefix) |
+
+### `frontend/.env.local`
+
+| Variable | Description |
+|---|---|
+| `NEXT_PUBLIC_MUSIC_REGISTRY_ADDRESS` | Deployed MusicRegistry contract address |
+| `NEXT_PUBLIC_PAYMENT_ADDRESS` | Deployed Payment contract address |
+| `NEXT_PUBLIC_MUSIC_NFT_ADDRESS` | Deployed MusicNFT contract address |
+| `NEXT_PUBLIC_PINATA_JWT` | Pinata JWT token for IPFS uploads |
+
+---
+
