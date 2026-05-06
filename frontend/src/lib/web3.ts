@@ -1,5 +1,11 @@
-import { BrowserProvider } from "ethers";
+import { BrowserProvider, JsonRpcProvider } from "ethers";
 import { EthersError } from "@/types/global.d";
+
+const PUBLIC_SEPOLIA_RPC = process.env.NEXT_PUBLIC_SEPOLIA_RPC || "https://rpc.sepolia.org";
+
+export const getReadOnlyProvider = () => {
+  return new JsonRpcProvider(PUBLIC_SEPOLIA_RPC);
+};
 
 const SEPOLIA_CHAIN_ID = "0xaa36a7"; // 11155111 in hex
 

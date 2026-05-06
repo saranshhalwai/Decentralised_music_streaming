@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState, useEffect } from "react";
-import { Music, Wallet, Home, Compass, User, LayoutDashboard } from "lucide-react";
+import { Music, Wallet, Home, Compass, User, LayoutDashboard, ShoppingCart, Scale } from "lucide-react";
 import { getWeb3Provider, formatAddress } from "@/lib/web3";
 
 export default function Navbar() {
@@ -16,9 +16,28 @@ export default function Navbar() {
         if (accounts.length > 0) {
           setAddress(accounts[0]);
         }
+
+        window.ethereum.on('accountsChanged', (accounts: string[]) => {
+          if (accounts.length > 0) {
+            setAddress(accounts[0]);
+          } else {
+            setAddress("");
+          }
+        });
+
+        window.ethereum.on('chainChanged', () => {
+          window.location.reload();
+        });
       }
     };
     checkConnection();
+
+    return () => {
+      if (window.ethereum) {
+        window.ethereum.removeAllListeners('accountsChanged');
+        window.ethereum.removeAllListeners('chainChanged');
+      }
+    };
   }, []);
 
   const connectWallet = async () => {
@@ -47,6 +66,8 @@ export default function Navbar() {
               <NavLink href="/" icon={<Home className="w-4 h-4" />} text="Home" />
               <NavLink href="/explore" icon={<Compass className="w-4 h-4" />} text="Explore" />
               <NavLink href="/dashboard" icon={<LayoutDashboard className="w-4 h-4" />} text="Artist" />
+              <NavLink href="/marketplace" icon={<ShoppingCart className="w-4 h-4" />} text="Marketplace" />
+              <NavLink href="/dispute" icon={<Scale className="w-4 h-4" />} text="Disputes" />
             </div>
           </div>
 

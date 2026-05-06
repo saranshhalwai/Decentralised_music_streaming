@@ -49,6 +49,7 @@ contract MusicNFT is ERC721URIStorage, ERC2981, Ownable {
     error EmptyMetadataURI();
     error TokenNotFound(uint256 tokenId);
     error NotTrackOwner();
+    error NotTokenOwner();
 
     // -------------------------------------------------------------------------
     // Constructor
@@ -126,7 +127,7 @@ contract MusicNFT is ERC721URIStorage, ERC2981, Ownable {
 
     /// @notice Optional burn function for creators to destroy their NFT and remove royalties.
     function burn(uint256 tokenId) external {
-        if (_ownerOf(tokenId) != msg.sender) revert TokenNotFound(tokenId); 
+        if (_ownerOf(tokenId) != msg.sender) revert NotTokenOwner(); 
         _burn(tokenId);
         _resetTokenRoyalty(tokenId);
     }

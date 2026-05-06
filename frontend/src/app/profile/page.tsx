@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { User, Wallet, ArrowUpRight, Music, TrendingUp, DollarSign, Download, Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
 import { getWeb3Provider, formatAddress } from "@/lib/web3";
-import { getMusicRegistryContract, getPaymentContract } from "@/lib/contracts";
+import { getMusicRegistryContract, getPaymentContract, getMusicNFTContract } from "@/lib/contracts";
 import { ethers } from "ethers";
 import { useAudioPlayer } from "@/context/AudioPlayerContext";
 import TrackCard from "@/components/TrackCard";
@@ -29,6 +29,7 @@ export default function Profile() {
   const [balance, setBalance] = useState<string>("0.00");
   const [earnings, setEarnings] = useState<string>("0.00");
   const [artistTracks, setArtistTracks] = useState<Track[]>([]);
+  const [nftCount, setNftCount] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isWithdrawing, setIsWithdrawing] = useState(false);
   const [txStatus, setTxStatus] = useState<{ type: 'success' | 'error', message: string } | null>(null);
@@ -50,6 +51,11 @@ export default function Profile() {
       const paymentContract = getPaymentContract(provider);
       const artistEarnings = await paymentContract.earningsOf(userAddress);
       setEarnings(ethers.formatEther(artistEarnings));
+
+      // Fetch NFT Count
+      const nftContract = getMusicNFTContract(provider);
+      const balance = await nftContract.balanceOf(userAddress);
+      setNftCount(Number(balance));
 
       // Fetch Artist Tracks
       const registryContract = getMusicRegistryContract(provider);
@@ -84,7 +90,7 @@ export default function Profile() {
   }, [fetchProfileData]);
 
   const handleWithdraw = async () => {
-    if (parseFloat(earnings) === 0) return;
+    if (ethers.parseEther(earnings) === 0n) return;
     
     try {
       setIsWithdrawing(true);
@@ -204,10 +210,10 @@ export default function Profile() {
             </div>
             
             <button 
-              disabled={parseFloat(earnings) === 0 || isWithdrawing}
+              disabled={ethers.parseEther(earnings) === 0n || isWithdrawing}
               onClick={handleWithdraw}
               className={`w-full flex items-center justify-center gap-3 px-6 py-4 rounded-2xl font-bold transition-all shadow-lg ${
-                parseFloat(earnings) > 0 && !isWithdrawing
+                ethers.parseEther(earnings) > 0n && !isWithdrawing
                   ? "bg-[#ff2a5f] text-white hover:scale-[1.02] active:scale-95 shadow-[#ff2a5f]/20 hover:shadow-[#ff2a5f]/40"
                   : "bg-white/5 text-gray-500 cursor-not-allowed"
               }`}
@@ -246,7 +252,7 @@ export default function Profile() {
                </div>
                <div className="flex justify-between items-center">
                  <span className="text-gray-500 text-sm">Collection Size</span>
-                 <span className="text-white font-bold">0 NFTs</span>
+                 <span className="text-white font-bold">{nftCount} NFTs</span>
                </div>
             </div>
           </div>

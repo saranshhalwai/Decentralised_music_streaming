@@ -2,17 +2,20 @@
 pragma solidity ^0.8.28;
 
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "./MusicRegistry.sol";
+import "./SharedOwnership.sol";
 
 /// @title Payment
 /// @notice Handles artist tips and per-stream micro-payments.
 ///         Artists accumulate earnings on-chain and withdraw at will.
-contract Payment is ReentrancyGuard {
+contract Payment is ReentrancyGuard, Ownable {
     // -------------------------------------------------------------------------
     // State
     // -------------------------------------------------------------------------
 
     MusicRegistry public registry;
+    SharedOwnership public sharedOwnership;
 
     /// artist address => unclaimed ETH balance (in wei)
     mapping(address => uint256) private _earnings;
@@ -40,6 +43,13 @@ contract Payment is ReentrancyGuard {
         uint256 amount
     );
 
+    event TipTrackReceived(
+        address indexed fan,
+        uint256 indexed trackId,
+        address indexed artist,
+        uint256 amount
+    );
+
     event EarningsWithdrawn(address indexed artist, uint256 amount);
 
     // -------------------------------------------------------------------------
@@ -55,7 +65,7 @@ contract Payment is ReentrancyGuard {
     // Constructor
     // -------------------------------------------------------------------------
 
-    constructor(address _registryAddress) {
+    constructor(address _registryAddress) Ownable(msg.sender) {
         registry = MusicRegistry(_registryAddress);
     }
 
@@ -74,6 +84,19 @@ contract Payment is ReentrancyGuard {
         emit TipReceived(msg.sender, artist, msg.value);
     }
 
+    function setSharedOwnership(address _sharedOwnership) external onlyOwner {
+        sharedOwnership = SharedOwnership(_sharedOwnership);
+    }
+
+    function tipTrack(uint256 trackId) external payable {
+        if (msg.value == 0) revert ZeroValue();
+        address artist = registry.getTrack(trackId).artist;
+        _earnings[artist] += msg.value;
+        trackEarnings[trackId] += msg.value;
+        totalPlatformPayments += msg.value;
+        emit TipTrackReceived(msg.sender, trackId, artist, msg.value);
+    }
+
     /// @notice Pay for a stream (micro-payment). The full msg.value goes to the artist.
     /// @param trackId  The ID of the track being streamed.
     function streamPayment(uint256 trackId) external payable {
@@ -82,7 +105,12 @@ contract Payment is ReentrancyGuard {
         // Fetch the artist securely from the registry
         address artist = registry.getTrack(trackId).artist;
 
-        _earnings[artist] += msg.value;
+        if (address(sharedOwnership) != address(0) && sharedOwnership.hasShares(trackId)) {
+            sharedOwnership.distributeRevenue{value: msg.value}(trackId);
+        } else {
+            _earnings[artist] += msg.value;
+        }
+
         trackEarnings[trackId] += msg.value;
         totalPlatformPayments += msg.value;
         

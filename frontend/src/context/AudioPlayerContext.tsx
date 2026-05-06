@@ -23,7 +23,7 @@ export function AudioPlayerProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo(
     () => ({ currentTrack, setCurrentTrack, isPlaying, setIsPlaying, volume, setVolume, audioRef }),
-    [currentTrack, isPlaying, volume]
+    [currentTrack, isPlaying, volume, audioRef]
   );
 
   return <AudioPlayerContext.Provider value={value}>{children}</AudioPlayerContext.Provider>;

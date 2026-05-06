@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { ArrowLeft, Play, Disc, Clock, Calendar, Heart, Share2, DollarSign } from "lucide-react";
 import Link from "next/link";
 import { Track } from "@/types/track";
-import { getWeb3Provider } from "@/lib/web3";
+import { getReadOnlyProvider } from "@/lib/web3";
 import { getMusicRegistryContract } from "@/lib/contracts";
 import { getIPFSUrl } from "@/lib/ipfs";
 import { useAudioPlayer } from "@/context/AudioPlayerContext";
@@ -22,7 +22,7 @@ export default function TrackDetails() {
     const fetchTrack = async () => {
       try {
         setLoading(true);
-        const { provider } = await getWeb3Provider();
+        const provider = getReadOnlyProvider();
         const registry = getMusicRegistryContract(provider);
         const t = await registry.getTrack(BigInt(id));
         
@@ -37,6 +37,7 @@ export default function TrackDetails() {
           src: getIPFSUrl(t.ipfsCID) || "",
           coverUrl: getIPFSUrl(t.coverArtCID) || "",
           playCount: t.playCount,
+          timestamp: t.timestamp,
         });
       } catch (err) {
         console.error("Error fetching track details", err);
@@ -124,11 +125,17 @@ export default function TrackDetails() {
               <Play className="w-6 h-6 fill-current" />
               Play Now
             </button>
-            <button className="px-8 py-4 rounded-full bg-[#141414] border border-[#2a2a2a] text-white font-bold text-lg flex items-center gap-3 hover:bg-[#1f1f1f] transition-all">
+            <Link href="/marketplace" className="px-8 py-4 rounded-full bg-[#141414] border border-[#2a2a2a] text-white font-bold text-lg flex items-center gap-3 hover:bg-[#1f1f1f] transition-all">
               <Heart className="w-6 h-6" />
               Collect
-            </button>
-            <button className="p-4 rounded-full bg-[#141414] border border-[#2a2a2a] text-white hover:bg-[#1f1f1f] transition-all">
+            </Link>
+            <button 
+              onClick={() => {
+                navigator.clipboard.writeText(window.location.href);
+                alert("Link copied to clipboard!");
+              }}
+              className="p-4 rounded-full bg-[#141414] border border-[#2a2a2a] text-white hover:bg-[#1f1f1f] transition-all"
+            >
               <Share2 className="w-6 h-6" />
             </button>
           </div>
@@ -136,8 +143,41 @@ export default function TrackDetails() {
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 pt-8 border-t border-white/5">
              <InfoStat icon={<Disc className="w-4 h-4 text-[#ff2a5f]" />} label="Format" value="MP3 / IPFS" />
              <InfoStat icon={<Clock className="w-4 h-4 text-[#ff2a5f]" />} label="Duration" value="3:45" />
-             <InfoStat icon={<Calendar className="w-4 h-4 text-[#ff2a5f]" />} label="Released" value="April 2026" />
+             <InfoStat icon={<Calendar className="w-4 h-4 text-[#ff2a5f]" />} label="Released" value={track.timestamp ? new Date(Number(track.timestamp) * 1000).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : "Unknown"} />
              <InfoStat icon={<DollarSign className="w-4 h-4 text-[#ff2a5f]" />} label="Price" value="0.0001 ETH" />
+          </div>
+
+          <div className="bg-[#141414] border border-[#2a2a2a] rounded-3xl p-8 mt-8">
+            <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
+              <DollarSign className="text-[#ff2a5f]" />
+              Support the Artist
+            </h3>
+            <p className="text-gray-400 mb-6 text-sm">Send a direct tip to {track.artist_name} to support their work.</p>
+            <div className="flex flex-wrap gap-4">
+              {[0.001, 0.005, 0.01].map((amt) => (
+                <button
+                  key={amt}
+                  onClick={async () => {
+                     try {
+                        const { getWeb3Provider } = await import("@/lib/web3");
+                        const { getPaymentContract } = await import("@/lib/contracts");
+                        const { ethers } = await import("ethers");
+                        const { signer } = await getWeb3Provider();
+                        const payment = getPaymentContract(signer);
+                        const tx = await payment.tipTrack(BigInt(track.id), { value: ethers.parseEther(amt.toString()) });
+                        await tx.wait();
+                        alert(`Successfully tipped ${amt} ETH!`);
+                     } catch (e) {
+                        console.error(e);
+                        alert("Tip failed.");
+                     }
+                  }}
+                  className="px-6 py-3 rounded-full bg-[#1a1a1a] border border-[#2a2a2a] hover:bg-[#ff2a5f]/10 hover:border-[#ff2a5f]/50 hover:text-[#ff2a5f] transition-all font-bold"
+                >
+                  {amt} ETH
+                </button>
+              ))}
+            </div>
           </div>
 
           <div className="bg-[#141414] border border-[#2a2a2a] rounded-3xl p-8 mt-8">

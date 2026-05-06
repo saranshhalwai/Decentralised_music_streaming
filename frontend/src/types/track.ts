@@ -9,4 +9,5 @@ export interface Track {
   src: string;
   coverUrl: string;
   playCount: number | bigint;
+  timestamp?: bigint;
 }

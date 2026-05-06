@@ -1,4 +1,4 @@
-import { Play, Disc, Heart } from "lucide-react";
+import { Play, Disc, Heart, DollarSign } from "lucide-react";
 import { Track } from "@/types/track";
 import Image from "next/image";
 
@@ -36,9 +36,36 @@ export default function TrackCard({ track, onPlay }: { track: Track; onPlay: (tr
             <h3 className="font-bold text-lg line-clamp-1">{track.title}</h3>
             <p className="text-gray-400 text-sm line-clamp-1">{track.artist_name}</p>
           </div>
-          <button className="text-gray-500 hover:text-[#ff2a5f] transition-colors">
-            <Heart className="w-5 h-5" />
-          </button>
+          <div className="flex gap-2">
+            <button 
+              className="text-gray-500 hover:text-[#ff2a5f] transition-colors group relative"
+              onClick={async (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                try {
+                  const { getWeb3Provider } = await import("@/lib/web3");
+                  const { getPaymentContract } = await import("@/lib/contracts");
+                  const { ethers } = await import("ethers");
+                  const { signer } = await getWeb3Provider();
+                  const payment = getPaymentContract(signer);
+                  const tx = await payment.tipTrack(BigInt(track.id), { value: ethers.parseEther("0.001") });
+                  await tx.wait();
+                  alert("Quick tip (0.001 ETH) sent!");
+                } catch (err) {
+                  console.error(err);
+                  alert("Tip failed.");
+                }
+              }}
+            >
+              <DollarSign className="w-5 h-5" />
+              <span className="absolute -top-8 left-1/2 -translate-x-1/2 bg-black text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 whitespace-nowrap transition-opacity pointer-events-none">
+                Tip 0.001 ETH
+              </span>
+            </button>
+            <button className="text-gray-500 hover:text-[#ff2a5f] transition-colors">
+              <Heart className="w-5 h-5" />
+            </button>
+          </div>
         </div>
         
         <div className="flex items-center gap-4 mt-4 text-xs font-medium text-gray-500">

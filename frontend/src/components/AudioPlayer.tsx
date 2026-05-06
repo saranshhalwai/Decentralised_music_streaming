@@ -63,7 +63,7 @@ export default function AudioPlayer() {
     if (!audio) return;
 
     if (isPlaying && !isAwaitingPayment) {
-      if (audio.src && audio.src !== window.location.href) {
+      if (activeSrc.length > 0) {
         if (audio.readyState === 0) audio.load();
         
         audio.play().catch(err => {
