@@ -15,11 +15,13 @@
 - [x] `MusicRegistry.sol` (dispute resolver, ownership transfer, genre validation, event order)
 - [x] `Payment.sol` (tipTrack, SharedOwnership reference, streamPayment routing)
 - [x] `MusicNFT.sol` (custom NotTokenOwner error in burn)
+- [x] `BeatToken.sol` (added `claimFaucet` for testing and `minter` role for rewards)
+- [x] `MusicRegistry.sol` (added automatic 100 BEAT reward for track uploads)
 
 ## 5. Updates & Configs
-- [x] Update `deploy.ts`
+- [x] Update `deploy.ts` (added post-deploy wiring for rewards and roles)
 - [x] Update `blockchain/.env.example` and `frontend/.env.example`
-- [x] Update `lib/contracts.ts`
+- [x] Update `lib/contracts.ts` (synced address names and added governance token helper)
 
 ## 6. Frontend Bug Fixes
 - [x] FE-1: `explore/page.tsx` Use `getReadOnlyProvider()`
@@ -32,9 +34,12 @@
 - [x] FE-8: `Navbar.tsx` Add MetaMask event listeners
 - [x] FE-9: `profile/page.tsx` Fetch real NFT count
 - [x] FE-10: `explore/page.tsx` Sort by `playCount` descending
+- [x] FE-11: `dispute/page.tsx` Fixed crash on null votes and synced with smart contract struct
+- [x] FE-12: `AudioPlayer.tsx` Enforced payment before playback (no bypass)
 
 ## 7. Frontend New Features
 - [x] `track/[id]/page.tsx` Tip Artist section
 - [x] `TrackCard.tsx` Add quick-tip button
 - [x] Create `/marketplace` pages
 - [x] Create `/dispute` pages
+- [x] `profile/page.tsx` Added Community Governance section (Faucet & Delegation)

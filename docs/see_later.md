@@ -23,3 +23,10 @@ Anyone can open Chrome DevTools → Network tab and steal the JWT to abuse your 
 ## 2. Frontend Polish
 - `dashboard/page.tsx` Add tabs
 - `profile/page.tsx` Tip vs stream breakdown
+- **AudioPlayer:** Improve mobile layout (current controls are cramped on small screens)
+- **Track Page:** Add social sharing links (Twitter, Warpcast)
+
+## 3. Smart Contract Extensions
+- **DisputeResolution:** Support for multiple evidence CIDs per party
+- **MusicRegistry:** Tiered rewards based on play count milestones
+- **Marketplace:** Bidding/Auction functionality for NFTs

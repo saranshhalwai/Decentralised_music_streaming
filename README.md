@@ -1,6 +1,6 @@
 # BeatChain — Decentralised Music Streaming
 
-A full-stack **Web3 music streaming platform** built on Ethereum (Sepolia testnet). Artists upload their tracks to IPFS, register them on-chain, and receive direct ETH payments and tips from fans — with zero intermediaries. Fans can also collect exclusive music NFTs.
+A full-stack **Web3 music streaming platform** built on Ethereum (Sepolia testnet). Artists upload their tracks to IPFS, register them on-chain, and receive direct ETH payments and tips from fans — with zero intermediaries. Fans can also collect exclusive music NFTs and participate in community governance via the BEAT token.
 
 ---
 
@@ -10,25 +10,25 @@ A full-stack **Web3 music streaming platform** built on Ethereum (Sepolia testne
 Decentralised_music_streaming/
 ├── blockchain/          # Hardhat 3 project (smart contracts + tests + deploy)
 │   ├── contracts/
-│   │   ├── MusicRegistry.sol   # On-chain music catalog
-│   │   ├── Payment.sol         # Tips & per-stream micro-payments
-│   │   └── MusicNFT.sol        # ERC-721 collectibles with ERC-2981 royalties
+│   │   ├── MusicRegistry.sol     # On-chain music catalog & Artist rewards
+│   │   ├── Payment.sol           # Tips & per-stream micro-payments
+│   │   ├── MusicNFT.sol          # ERC-721 collectibles with ERC-2981 royalties
+│   │   ├── BeatToken.sol         # ERC-20 Governance token (BEAT)
+│   │   ├── DisputeResolution.sol # Community governance for copyright claims
+│   │   └── SharedOwnership.sol   # Revenue sharing for multiple stakeholders
 │   ├── scripts/
-│   │   └── deploy.ts           # Sequential deployment script
-│   ├── test/
-│   │   ├── MusicRegistry.ts
-│   │   ├── Payment.ts
-│   │   └── MusicNFT.ts
+│   │   └── deploy.ts             # Sequential deployment script
+│   ├── test/                     # Integrated test suite
 │   └── hardhat.config.ts
 └── frontend/            # Next.js 16 + Tailwind CSS frontend
     └── src/
-        ├── app/         # Pages: /, /explore, /dashboard, /profile, /track
+        ├── app/         # Pages: /, /explore, /dashboard, /profile, /track, /dispute
         ├── components/  # AudioPlayer, Navbar, TrackCard
         ├── context/     # AudioPlayerContext (global audio state)
         └── lib/
             ├── web3.ts         # MetaMask / BrowserProvider integration
             ├── contracts.ts    # Contract factory helpers
-            ├── ipfs.ts         # Pinata upload & Cloudflare IPFS gateway
+            ├── ipfs.ts         # Pinata upload & IPFS gateway fallback
             └── abis/           # Compiled JSON ABIs
 ```
 
@@ -38,11 +38,22 @@ Decentralised_music_streaming/
 
 | Contract | Description |
 |---|---|
-| **MusicRegistry** | On-chain catalog of tracks. Artists call `uploadTrack()` with IPFS CIDs; anyone can call `incrementPlayCount()`. |
-| **Payment** | Accepts ETH via `tipArtist()` and `streamPayment()`. Artists `withdrawEarnings()` at will. Protected by OpenZeppelin `ReentrancyGuard`. |
-| **MusicNFT** | ERC-721 collectible NFTs linked to registry tracks. Implements ERC-2981 royalty standard. Artists mint with `mintCollectible()`. |
+| **MusicRegistry** | On-chain catalog of tracks. Rewards artists with **100 BEAT** per upload. |
+| **Payment** | Accepts ETH via `tipArtist()` and `streamPayment()`. Handles revenue distribution via `SharedOwnership`. |
+| **MusicNFT** | ERC-721 collectible NFTs linked to tracks. Implements ERC-2981 royalties. |
+| **BeatToken** | ERC-20 governance token (BEAT). Uses `ERC20Votes` for delegated community voting. Includes a 1,000 BEAT faucet. |
+| **DisputeResolution** | Community-led copyright enforcement. Holders vote with BEAT to resolve ownership claims. |
 
-> **Security:** `Payment` uses the checks-effects-interactions pattern alongside `ReentrancyGuard`. `MusicNFT` verifies track ownership via the registry before minting.
+---
+
+## Token Ecosystem (BEAT)
+
+BeatChain features a native utility and governance token called **BEAT**.
+
+*   **Earning:** Artists earn 100 BEAT automatically for every track published.
+*   **Testing:** New users can claim a one-time faucet of **1,000 BEAT** on their Profile page.
+*   **Governance:** BEAT holders can vote on active disputes.
+*   **Activation:** To vote, you must **delegate** your tokens to yourself on the Profile page to activate your "Voting Power".
 
 ---
 
@@ -51,7 +62,7 @@ Decentralised_music_streaming/
 **Blockchain**
 - [Hardhat 3 Beta](https://hardhat.org/docs/getting-started) — build, test, deploy
 - Solidity `^0.8.28`
-- OpenZeppelin Contracts `^5.6.1` (ERC-721, ERC-2981, ReentrancyGuard)
+- OpenZeppelin Contracts `^5.6.1` (ERC-721, ERC-20, ERC-2981, ERC20Votes, ReentrancyGuard)
 - ethers.js `^6`
 - Mocha + Chai (TypeScript integration tests)
 
@@ -61,7 +72,7 @@ Decentralised_music_streaming/
 - Tailwind CSS `^4`
 - ethers.js `^6` — wallet & contract interactions
 - Pinata SDK — IPFS uploads
-- MetaMask — browser wallet (Sepolia testnet)
+- Lucide React — Iconography
 
 ---
 
@@ -73,7 +84,7 @@ Decentralised_music_streaming/
 - npm `>=9`
 - [MetaMask](https://metamask.io/) browser extension
 - A Sepolia RPC URL (e.g., from [Alchemy](https://alchemy.com) or [Infura](https://infura.io))
-- A [Pinata](https://app.pinata.cloud/) account for IPFS uploads (free tier works)
+- A [Pinata](https://app.pinata.cloud/) account for IPFS uploads
 
 ---
 
@@ -109,36 +120,16 @@ SEPOLIA_PRIVATE_KEY=0xYOUR_WALLET_PRIVATE_KEY
 #### Run Tests
 
 ```bash
-# Run all tests (Solidity + Mocha)
 npx hardhat test
-
-# Run only TypeScript/Mocha tests
-npx hardhat test mocha
-
-# Run only Solidity tests
-npx hardhat test solidity
 ```
 
 #### Deploy Contracts
 
-**Local (simulated chain):**
-```bash
-npx hardhat run scripts/deploy.ts
-```
-
-**Sepolia Testnet:**
 ```bash
 npx hardhat run scripts/deploy.ts --network sepolia
 ```
 
-After deployment you will see a summary like:
-```
-✅ MusicRegistry deployed to: 0x...
-✅ Payment deployed to:       0x...
-✅ MusicNFT deployed to:      0x...
-```
-
-> **Copy these addresses** — you'll need them for the frontend `.env`.
+> **Important:** Save the addresses from the console output to your frontend `.env`.
 
 ---
 
@@ -149,18 +140,20 @@ cd ../frontend
 npm install
 ```
 
-Copy the environment file:
-
-```bash
-cp .env.example .env.local
-```
-
-Edit `frontend/.env.local` with the contract addresses from the deployment step and your Pinata JWT:
+Create a `.env` file in the `frontend` directory:
 
 ```
 NEXT_PUBLIC_MUSIC_REGISTRY_ADDRESS=0x...
 NEXT_PUBLIC_PAYMENT_ADDRESS=0x...
 NEXT_PUBLIC_MUSIC_NFT_ADDRESS=0x...
+NEXT_PUBLIC_BEAT_TOKEN_ADDRESS=0x...
+NEXT_PUBLIC_DISPUTE_RESOLUTION_ADDRESS=0x...
+NEXT_PUBLIC_SHARED_OWNERSHIP_ADDRESS=0x...
+NEXT_PUBLIC_MUSIC_NFT_MARKETPLACE_ADDRESS=0x...
+
+NEXT_PUBLIC_RPC_URL=https://eth-sepolia.g.alchemy.com/v2/YOUR_KEY
+NEXT_PUBLIC_CHAIN_ID=0xaa36a7
+NEXT_PUBLIC_IPFS_GATEWAY=your-pinata-gateway.mypinata.cloud
 NEXT_PUBLIC_PINATA_JWT=eyJ...
 ```
 
@@ -170,65 +163,26 @@ NEXT_PUBLIC_PINATA_JWT=eyJ...
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
-
 ---
 
 ## Application Pages
 
 | Route | Description |
 |---|---|
-| `/` | Landing page — hero, features overview |
+| `/` | Landing page — platform features |
 | `/explore` | Browse all tracks registered on-chain |
-| `/dashboard` | Artist dashboard — upload tracks, mint NFTs, view earnings |
-| `/profile` | View your uploaded tracks and NFT collectibles |
-| `/track/[id]` | Individual track page — stream, tip artist, pay per-stream |
+| `/dashboard` | Artist hub — upload tracks, mint NFTs, view earnings |
+| `/profile` | Claim BEAT faucet, activate voting power, view your collection |
+| `/dispute` | Community governance — vote on active copyright claims |
+| `/track/[id]` | Track details — stream, tip artist, pay per-stream |
 
 ---
 
-## Running Tests
+## Governance & Disputes
 
-All tests are located in `blockchain/test/`.
-
-```bash
-cd blockchain
-
-# Full test suite
-npx hardhat test
-
-# Individual contract tests
-npx hardhat test mocha --grep "MusicRegistry"
-npx hardhat test mocha --grep "Payment"
-npx hardhat test mocha --grep "MusicNFT"
-```
-
-Test coverage includes:
-- Track upload validation (empty field guards)
-- Play count incrementing
-- Tip and stream payment flows
-- Reentrancy attack prevention
-- NFT minting, royalty setting, and burning
-- Access control (only track owners can mint NFTs)
+If a track is suspected of copyright infringement, users can file a dispute on-chain.
+1.  **Voting:** Community members use their "Voting Power" (activated BEAT tokens) to support the Claimant or the Respondent.
+2.  **Resolution:** After the voting deadline, anyone can trigger `resolveDispute()`.
+3.  **Outcome:** If the community accepts the claim, ownership of the track is automatically transferred to the Claimant in the registry.
 
 ---
-
-## Environment Variables Reference
-
-### `blockchain/.env`
-
-| Variable | Description |
-|---|---|
-| `SEPOLIA_RPC_URL` | RPC endpoint for Sepolia (Alchemy/Infura) |
-| `SEPOLIA_PRIVATE_KEY` | Private key of deployer wallet (with `0x` prefix) |
-
-### `frontend/.env.local`
-
-| Variable | Description |
-|---|---|
-| `NEXT_PUBLIC_MUSIC_REGISTRY_ADDRESS` | Deployed MusicRegistry contract address |
-| `NEXT_PUBLIC_PAYMENT_ADDRESS` | Deployed Payment contract address |
-| `NEXT_PUBLIC_MUSIC_NFT_ADDRESS` | Deployed MusicNFT contract address |
-| `NEXT_PUBLIC_PINATA_JWT` | Pinata JWT token for IPFS uploads |
-
----
-
