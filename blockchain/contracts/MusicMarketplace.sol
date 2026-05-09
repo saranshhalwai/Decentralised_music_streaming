@@ -15,6 +15,8 @@ contract MusicMarketplace is ReentrancyGuard, Ownable {
 
     mapping(uint256 => Listing) public listings;
     uint256[] private _activeListingIds;
+    // mapping tokenId => index+1 in _activeListingIds (0 means not present)
+    mapping(uint256 => uint256) private _activeIndex;
     MusicNFT public musicNFT;
     uint256 public platformFeeBps = 250; // 2.5%
     address public feeRecipient;  // deployer/platform wallet
@@ -34,8 +36,10 @@ contract MusicMarketplace is ReentrancyGuard, Ownable {
         require(musicNFT.isApprovedForAll(msg.sender, address(this)) || musicNFT.getApproved(tokenId) == address(this), "Not approved");
         require(price > 0, "Price must be > 0");
 
-        if (!listings[tokenId].active) {
+        // Only add to the active index array if not already present
+        if (_activeIndex[tokenId] == 0) {
             _activeListingIds.push(tokenId);
+            _activeIndex[tokenId] = _activeListingIds.length; // store index+1
         }
 
         listings[tokenId] = Listing({
@@ -48,12 +52,27 @@ contract MusicMarketplace is ReentrancyGuard, Ownable {
         emit NFTListed(tokenId, msg.sender, price);
     }
 
+    function _removeActiveListing(uint256 tokenId) internal {
+        uint256 idxPlusOne = _activeIndex[tokenId];
+        if (idxPlusOne == 0) return;
+        uint256 idx = idxPlusOne - 1;
+        uint256 lastIndex = _activeListingIds.length - 1;
+        if (idx != lastIndex) {
+            uint256 lastTokenId = _activeListingIds[lastIndex];
+            _activeListingIds[idx] = lastTokenId;
+            _activeIndex[lastTokenId] = idx + 1;
+        }
+        _activeListingIds.pop();
+        delete _activeIndex[tokenId];
+    }
+
     function cancelListing(uint256 tokenId) external {
         Listing storage listing = listings[tokenId];
         require(listing.active, "Not active");
         require(listing.seller == msg.sender, "Not seller");
 
         listing.active = false;
+        _removeActiveListing(tokenId);
         emit NFTDelisted(tokenId);
     }
 
@@ -63,6 +82,7 @@ contract MusicMarketplace is ReentrancyGuard, Ownable {
         require(msg.value == listing.price, "Price mismatch");
 
         listing.active = false;
+        _removeActiveListing(tokenId);
 
         uint256 platformFee = (msg.value * platformFeeBps) / 10000;
         uint256 remaining = msg.value - platformFee;
