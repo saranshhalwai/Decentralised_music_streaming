@@ -2,14 +2,14 @@
 
 import { useParams } from "next/navigation";
 import { useEffect, useState, useCallback, useMemo } from "react";
-import { ArrowLeft, Play, Disc, Clock, Calendar, Heart, Share2, DollarSign, AlertTriangle, ShieldAlert, Award, Loader2, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Play, Disc, Clock, Calendar, Heart, Share2, DollarSign, AlertTriangle, ShieldAlert, Award, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { Track } from "@/types/track";
 import { getReadOnlyProvider, getWeb3Provider } from "@/lib/web3";
 import { getMusicRegistryContract, getDisputeResolutionContract, getMusicNFTContract } from "@/lib/contracts";
 import { getIPFSUrl } from "@/lib/ipfs";
 import { useAudioPlayer } from "@/context/AudioPlayerContext";
-import { ethers } from "ethers";
+import Image from "next/image";
 
 const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=500&auto=format&fit=crop";
 
@@ -32,6 +32,7 @@ export default function TrackDetails() {
   // Image state with multi-step fallback
   const [imgSrc, setImgSrc] = useState<string>(FALLBACK_IMAGE);
   const [retryCount, setRetryCount] = useState(0);
+  const [duration, setDuration] = useState<number>(0);
 
   const fetchTrack = useCallback(async () => {
     try {
@@ -74,8 +75,26 @@ export default function TrackDetails() {
   }, [id]);
 
   useEffect(() => {
-    if (id) fetchTrack();
+    if (id) {
+      const timer = setTimeout(() => {
+        void fetchTrack();
+      }, 0);
+      return () => clearTimeout(timer);
+    }
   }, [id, fetchTrack]);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    const updateDuration = () => setDuration(audio.duration);
+    audio.addEventListener('loadedmetadata', updateDuration);
+    if (audio.duration) setDuration(audio.duration);
+
+    return () => {
+      audio.removeEventListener('loadedmetadata', updateDuration);
+    };
+  }, [audioRef, currentTrack]);
 
   const handlePlay = () => {
     if (track) {
@@ -116,11 +135,11 @@ export default function TrackDetails() {
   };
 
   const displayDuration = useMemo(() => {
-    if (currentTrack?.id === id && audioRef.current?.duration) {
-      return formatTime(audioRef.current.duration);
+    if (currentTrack?.id === id && duration) {
+      return formatTime(duration);
     }
     return "3:45"; 
-  }, [currentTrack, id, audioRef]);
+  }, [currentTrack, id, duration]);
 
   // Dispute state
   const [showDisputeModal, setShowDisputeModal] = useState(false);
@@ -142,7 +161,7 @@ export default function TrackDetails() {
       alert("Dispute opened successfully!");
       setShowDisputeModal(false);
       setDisputeReason("");
-    } catch (e) {
+    } catch {
       alert("Failed to open dispute.");
     } finally {
       setIsSubmittingDispute(false);
@@ -158,7 +177,7 @@ export default function TrackDetails() {
       const tx = await nftContract.mintCollectible(userAddress!, BigInt(id), track.ipfsCID, userAddress!, 250);
       await tx.wait();
       alert("NFT Minted successfully!");
-    } catch (e) {
+    } catch {
       alert("Failed to mint NFT.");
     } finally {
       setIsMinting(false);
@@ -191,11 +210,12 @@ export default function TrackDetails() {
 
       <div className="flex flex-col lg:flex-row gap-12 items-start">
         <div className="w-full lg:w-1/3 aspect-square rounded-3xl overflow-hidden shadow-2xl relative group bg-gradient-to-br from-[#1a1a1a] to-[#0d0d0d]">
-          {/* Using native img tag for decentralized sources */}
-          <img 
+          <Image 
             src={imgSrc} 
             alt={track.title} 
             onError={handleImageError}
+            fill
+            unoptimized
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 relative z-0"
           />
           <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center z-10">
@@ -261,7 +281,7 @@ export default function TrackDetails() {
                         const tx = await payment.tipTrack(BigInt(track.id), { value: ethers.parseEther(amt.toString()) });
                         await tx.wait();
                         alert(`Successfully tipped ${amt} ETH!`);
-                     } catch (e) {alert("Tip failed.");}
+                     } catch {alert("Tip failed.");}
                   }} className="px-6 py-3 rounded-full bg-[#1a1a1a] border border-[#2a2a2a] hover:bg-[#ff2a5f]/10 hover:border-[#ff2a5f]/50 hover:text-[#ff2a5f] transition-all font-bold">{amt} ETH</button>
               ))}
             </div>
