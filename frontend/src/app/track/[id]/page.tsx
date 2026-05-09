@@ -9,7 +9,6 @@ import { getReadOnlyProvider, getWeb3Provider } from "@/lib/web3";
 import { getMusicRegistryContract, getDisputeResolutionContract, getMusicNFTContract } from "@/lib/contracts";
 import { getIPFSUrl } from "@/lib/ipfs";
 import { useAudioPlayer } from "@/context/AudioPlayerContext";
-import Image from "next/image";
 import { ethers } from "ethers";
 
 const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=500&auto=format&fit=crop";
@@ -179,18 +178,15 @@ export default function TrackDetails() {
 
       <div className="flex flex-col lg:flex-row gap-12 items-start">
         <div className="w-full lg:w-1/3 aspect-square rounded-3xl overflow-hidden shadow-2xl relative group bg-gradient-to-br from-[#1a1a1a] to-[#0d0d0d]">
-          <Image 
+          {/* Using native img tag for decentralized sources */}
+          <img 
             src={imgSrc} 
             alt={track.title} 
-            fill
-            unoptimized
-            priority
             onError={handleImageError}
-            sizes="(max-width: 768px) 100vw, 33vw"
-            className="object-cover group-hover:scale-105 transition-transform duration-700"
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 relative z-0"
           />
-          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-             <button onClick={handlePlay} className="w-20 h-20 rounded-full bg-[#ff2a5f] flex items-center justify-center shadow-2xl hover:scale-110 transition-transform z-10">
+          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center z-10">
+             <button onClick={handlePlay} className="w-20 h-20 rounded-full bg-[#ff2a5f] flex items-center justify-center shadow-2xl hover:scale-110 transition-transform">
                <Play className="w-10 h-10 ml-1 text-white fill-current" />
              </button>
           </div>

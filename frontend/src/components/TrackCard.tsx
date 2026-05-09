@@ -2,7 +2,6 @@
 
 import { Play, Disc, Heart, DollarSign, ExternalLink } from "lucide-react";
 import { Track } from "@/types/track";
-import Image from "next/image";
 import Link from "next/link";
 import { useState, useEffect } from "react";
 
@@ -46,27 +45,27 @@ export default function TrackCard({ track, onPlay }: { track: Track; onPlay: (tr
   };
 
   return (
-    <div className="group relative rounded-2xl overflow-hidden bg-[#141414] border border-[#2a2a2a] hover:border-[#ff2a5f]/50 transition-all duration-300">
+    <div className="group relative rounded-2xl overflow-hidden bg-[#141414] border border-[#2a2a2a] hover:border-[#ff2a5f]/50 transition-all duration-300 shadow-xl">
       <div className="aspect-square relative overflow-hidden bg-gradient-to-br from-[#1a1a1a] to-[#0d0d0d] flex items-center justify-center">
-        <Image 
+        {/* Using native img tag to bypass Next.js Image component domain restrictions and optimization overhead for decentralized sources */}
+        <img 
           src={imgSrc} 
           alt={track.title} 
-          fill
-          unoptimized
           onError={handleImageError}
-          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
-          className="object-cover group-hover:scale-105 transition-transform duration-500"
+          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 relative z-0"
+          loading="lazy"
         />
-        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-4">
+        
+        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-4 z-10">
           <button 
             onClick={handlePlayClick}
-            className="w-14 h-14 rounded-full bg-[#ff2a5f] flex items-center justify-center text-white hover:scale-110 transition-transform duration-300 glow-effect z-10"
+            className="w-14 h-14 rounded-full bg-[#ff2a5f] flex items-center justify-center text-white hover:scale-110 transition-transform duration-300 glow-effect"
           >
             <Play className="w-7 h-7 ml-1" fill="currentColor" />
           </button>
           <Link 
             href={`/track/${track.id}`}
-            className="w-14 h-14 rounded-full bg-white flex items-center justify-center text-black hover:scale-110 transition-transform duration-300 z-10"
+            className="w-14 h-14 rounded-full bg-white flex items-center justify-center text-black hover:scale-110 transition-transform duration-300"
           >
             <ExternalLink className="w-6 h-6" />
           </Link>
