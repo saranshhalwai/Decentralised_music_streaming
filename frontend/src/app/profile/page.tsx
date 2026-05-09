@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
-import { User, Wallet, Music, TrendingUp, Download, Loader2, AlertCircle, CheckCircle2, Award, Tag } from "lucide-react";
+import { User, Wallet, Music, TrendingUp, Download, Loader2, AlertCircle, CheckCircle2, Award, Tag, Shield } from "lucide-react";
 import { getWeb3Provider, formatAddress } from "@/lib/web3";
-import { getMusicRegistryContract, getPaymentContract, getMusicNFTContract, getMarketplaceContract, MARKETPLACE_ADDRESS } from "@/lib/contracts";
+import { getMusicRegistryContract, getPaymentContract, getMusicNFTContract, getMarketplaceContract, getGovernanceTokenContract, MARKETPLACE_ADDRESS } from "@/lib/contracts";
 import { ethers } from "ethers";
 import { useAudioPlayer } from "@/context/AudioPlayerContext";
 import TrackCard from "@/components/TrackCard";
@@ -37,10 +37,13 @@ export default function Profile() {
   const [address, setAddress] = useState<string>("Not Connected");
   const [balance, setBalance] = useState<string>("0.00");
   const [earnings, setEarnings] = useState<string>("0.00");
+  const [beatBalance, setBeatBalance] = useState<string>("0.00");
+  const [votingPower, setVotingPower] = useState<string>("0.00");
   const [artistTracks, setArtistTracks] = useState<Track[]>([]);
   const [ownedNFTs, setOwnedNfts] = useState<OwnedNFT[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isWithdrawing, setIsWithdrawing] = useState(false);
+  const [isDelegating, setIsDelegating] = useState(false);
   const [txStatus, setTxStatus] = useState<{ type: 'success' | 'error', message: string } | null>(null);
   
   const { setCurrentTrack, setIsPlaying } = useAudioPlayer();
@@ -63,6 +66,17 @@ export default function Profile() {
         setEarnings(ethers.formatEther(artistEarnings));
       } catch {
         setEarnings("0.0");
+      }
+
+      // Fetch Governance Data
+      try {
+        const beatToken = getGovernanceTokenContract(provider);
+        const bal = await beatToken.balanceOf(userAddress);
+        const power = await beatToken.getVotes(userAddress);
+        setBeatBalance(ethers.formatEther(bal));
+        setVotingPower(ethers.formatEther(power));
+      } catch (e) {
+        console.error("Governance fetch failed", e);
       }
 
       // Fetch Owned NFTs
@@ -145,6 +159,27 @@ export default function Profile() {
       setTxStatus({ type: 'error', message: error.message || 'Withdrawal failed.' });
     } finally {
       setIsWithdrawing(false);
+    }
+  };
+
+  const handleDelegate = async () => {
+    try {
+      setIsDelegating(true);
+      setTxStatus(null);
+      const { signer } = await getWeb3Provider();
+      const userAddress = await signer.getAddress();
+      const beatToken = getGovernanceTokenContract(signer);
+      
+      const tx = await beatToken.delegate(userAddress);
+      setTxStatus({ type: 'success', message: 'Delegation transaction sent...' });
+      await tx.wait();
+      setTxStatus({ type: 'success', message: 'Voting power successfully activated!' });
+      fetchProfileData();
+    } catch (err: unknown) {
+      console.error(err);
+      setTxStatus({ type: 'error', message: 'Delegation failed.' });
+    } finally {
+      setIsDelegating(false);
     }
   };
 
@@ -242,6 +277,40 @@ export default function Profile() {
               {isWithdrawing ? <Loader2 className="w-5 h-5 animate-spin" /> : <Download className="w-5 h-5" />}
               Withdraw to Wallet
             </button>
+          </div>
+
+          {/* Governance Card */}
+          <div className="bg-[#141414] border border-[#2a2a2a] rounded-3xl p-8 shadow-xl">
+            <h2 className="text-lg font-bold mb-6 flex items-center gap-2 text-gray-400">
+              <Shield className="text-[#ff7e40] w-5 h-5" /> Community Governance
+            </h2>
+            <div className="space-y-6">
+              <div>
+                <p className="text-xs text-gray-500 uppercase font-bold tracking-wider mb-1">BEAT Balance</p>
+                <p className="text-2xl font-black text-white">{parseFloat(beatBalance).toFixed(2)} <span className="text-sm font-bold text-gray-500">BEAT</span></p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 uppercase font-bold tracking-wider mb-1">Current Voting Weight</p>
+                <p className="text-2xl font-black text-[#ff7e40]">{parseFloat(votingPower).toFixed(2)} <span className="text-sm font-bold text-gray-500">POWER</span></p>
+              </div>
+              
+              {parseFloat(beatBalance) > 0 && parseFloat(votingPower) === 0 && (
+                <div className="bg-[#ff7e40]/10 border border-[#ff7e40]/20 p-4 rounded-xl">
+                  <p className="text-xs text-[#ff7e40] font-medium leading-relaxed">
+                    You have BEAT tokens but your voting weight is 0. Activate it by self-delegating.
+                  </p>
+                </div>
+              )}
+
+              <button 
+                disabled={parseFloat(beatBalance) === 0 || isDelegating}
+                onClick={handleDelegate}
+                className="w-full flex items-center justify-center gap-3 px-6 py-4 rounded-2xl font-bold border border-[#ff7e40]/30 text-[#ff7e40] hover:bg-[#ff7e40]/10 disabled:opacity-50 transition-all"
+              >
+                {isDelegating ? <Loader2 className="w-5 h-5 animate-spin" /> : <Shield className="w-5 h-5" />}
+                {parseFloat(votingPower) > 0 ? "Re-activate Power" : "Activate Voting Weight"}
+              </button>
+            </div>
           </div>
 
           {/* Stats Card */}
