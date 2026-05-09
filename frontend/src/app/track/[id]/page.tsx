@@ -27,6 +27,8 @@ export default function TrackDetails() {
   const [loading, setLoading] = useState(true);
   const [isOwner, setIsOwner] = useState(false);
   const [userAddress, setUserAddress] = useState<string | null>(null);
+  const [liked, setLiked] = useState<boolean>(false);
+  const [plays, setPlays] = useState<number>(0);
   const { setCurrentTrack, setIsPlaying, currentTrack, audioRef } = useAudioPlayer();
 
   // Image state with multi-step fallback
@@ -57,6 +59,14 @@ export default function TrackDetails() {
       setTrack(formattedTrack);
       setImgSrc(formattedTrack.coverUrl || FALLBACK_IMAGE);
       setRetryCount(0);
+
+      try {
+        const likedLocal = typeof window !== 'undefined' && !!localStorage.getItem(`liked:${formattedTrack.id}`);
+        setLiked(Boolean(likedLocal));
+      } catch (e) {
+        setLiked(false);
+      }
+      setPlays(Number(formattedTrack.playCount?.toString?.() ?? formattedTrack.playCount ?? 0));
 
       // Check ownership
       try {
@@ -96,10 +106,20 @@ export default function TrackDetails() {
     };
   }, [audioRef, currentTrack]);
 
-  const handlePlay = () => {
+  const handlePlay = async () => {
     if (track) {
       setCurrentTrack(track);
       setIsPlaying(true);
+      // optimistic UI
+      setPlays((p) => p + 1);
+
+      try {
+        const { incrementPlayCountOnChain } = await import("@/lib/trackActions");
+        const updated = await incrementPlayCountOnChain(track.id);
+        if (typeof updated === 'number') setPlays(updated);
+      } catch (err) {
+        console.error("Failed to increment on-chain play count", err);
+      }
     }
   };
 
@@ -230,7 +250,7 @@ export default function TrackDetails() {
             <div>
               <div className="flex items-center gap-3 mb-4">
                 <span className="px-3 py-1 rounded-full bg-[#ff2a5f]/20 text-[#ff2a5f] text-xs font-bold uppercase tracking-widest border border-[#ff2a5f]/30">{track.genre}</span>
-                <span className="flex items-center gap-1 text-gray-500 text-sm"><Play className="w-3 h-3" />{track.playCount.toString()} Streams</span>
+                <span className="flex items-center gap-1 text-gray-500 text-sm"><Play className="w-3 h-3" />{plays.toString()} Streams</span>
               </div>
               <h1 className="text-5xl md:text-7xl font-black mb-4 tracking-tighter">{track.title}</h1>
               <p className="text-2xl text-gray-400 font-medium">by {track.artist_name}</p>
@@ -250,6 +270,10 @@ export default function TrackDetails() {
           <div className="flex flex-wrap gap-4">
             <button onClick={handlePlay} className="px-8 py-4 rounded-full bg-gradient-to-r from-[#ff2a5f] to-[#ff7e40] text-white font-bold text-lg flex items-center gap-3 hover:scale-105 transition-transform shadow-lg shadow-[#ff2a5f]/20">
               <Play className="w-6 h-6 fill-current" />Play Now
+            </button>
+            <button onClick={(e) => { e.preventDefault(); const newVal = !liked; setLiked(newVal); try { if (newVal) localStorage.setItem(`liked:${track?.id}`, '1'); else localStorage.removeItem(`liked:${track?.id}`); } catch (err) {} }} className={`px-6 py-4 rounded-full flex items-center gap-3 ${liked ? 'bg-[#ff2a5f] text-white' : 'bg-[#141414] border border-[#2a2a2a] text-white'}`}>
+              <Heart className="w-5 h-5" fill={liked ? 'currentColor' : undefined} />
+              {liked ? 'Liked' : 'Like'}
             </button>
             <Link href="/marketplace" className="px-8 py-4 rounded-full bg-[#141414] border border-[#2a2a2a] text-white font-bold text-lg flex items-center gap-3 hover:bg-[#1f1f1f] transition-all">
               <Heart className="w-6 h-6" />Collect

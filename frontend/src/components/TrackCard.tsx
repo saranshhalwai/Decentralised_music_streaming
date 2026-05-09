@@ -4,7 +4,7 @@ import { Play, Disc, Heart, DollarSign, ExternalLink } from "lucide-react";
 import { Track } from "@/types/track";
 import Link from "next/link";
 import { getIPFSUrl } from "@/lib/ipfs";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 
 const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=500&auto=format&fit=crop";
@@ -13,6 +13,8 @@ export default function TrackCard({ track, onPlay }: { track: Track; onPlay: (tr
   const [imgSrc, setImgSrc] = useState<string>(() => (track.coverUrl && track.coverUrl.length > 5) ? track.coverUrl : FALLBACK_IMAGE);
   const [retryCount, setRetryCount] = useState(0);
   const [prevCoverUrl, setPrevCoverUrl] = useState(track.coverUrl);
+  const [liked, setLiked] = useState<boolean>(false);
+  const [plays, setPlays] = useState<number>(Number(track.playCount?.toString?.() ?? track.playCount ?? 0));
 
   if (track.coverUrl !== prevCoverUrl) {
     setImgSrc((track.coverUrl && track.coverUrl.length > 5) ? track.coverUrl : FALLBACK_IMAGE);
@@ -20,10 +22,29 @@ export default function TrackCard({ track, onPlay }: { track: Track; onPlay: (tr
     setPrevCoverUrl(track.coverUrl);
   }
 
-  const handlePlayClick = (e: React.MouseEvent) => {
+  useEffect(() => {
+    try {
+      const likedLocal = typeof window !== 'undefined' && !!localStorage.getItem(`liked:${track.id}`);
+      setLiked(Boolean(likedLocal));
+    } catch (e) {
+      setLiked(false);
+    }
+  }, [track.id]);
+
+  const handlePlayClick = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    // optimistic UI update
+    setPlays((p) => p + 1);
     onPlay(track);
+
+    try {
+      const { incrementPlayCountOnChain } = await import("@/lib/trackActions");
+      const updated = await incrementPlayCountOnChain(track.id);
+      if (typeof updated === 'number') setPlays(updated);
+    } catch (err) {
+      console.error("Failed to increment on-chain play count", err);
+    }
   };
 
   const sanitizeCid = (cid?: string) => {
@@ -113,8 +134,20 @@ export default function TrackCard({ track, onPlay }: { track: Track; onPlay: (tr
             >
               <DollarSign className="w-5 h-5" />
             </button>
-            <button className="text-gray-500 hover:text-[#ff2a5f] transition-colors">
-              <Heart className="w-5 h-5" />
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const newVal = !liked;
+                setLiked(newVal);
+                try {
+                  if (newVal) localStorage.setItem(`liked:${track.id}`, '1');
+                  else localStorage.removeItem(`liked:${track.id}`);
+                } catch (err) {}
+              }}
+              className={`transition-colors ${liked ? 'text-[#ff2a5f]' : 'text-gray-500 hover:text-[#ff2a5f]'}`}
+            >
+              <Heart className="w-5 h-5" fill={liked ? 'currentColor' : undefined} />
             </button>
           </div>
         </div>
@@ -126,7 +159,7 @@ export default function TrackCard({ track, onPlay }: { track: Track; onPlay: (tr
           </span>
           <span className="flex items-center gap-1">
             <Play className="w-3 h-3" />
-            {track.playCount.toString()}
+            {plays.toString()}
           </span>
         </div>
       </div>

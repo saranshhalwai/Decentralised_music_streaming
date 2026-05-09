@@ -70,6 +70,10 @@ export default function AudioPlayer() {
     }
   }, [isPlaying, isAwaitingPayment, hasPaid, currentTrack, activeSrc, audioRef]);
 
+
+
+
+
   const fetchFullTrackAsBlob = useCallback(async (cid: string) => {
     try {
       setIsLoading(true);
