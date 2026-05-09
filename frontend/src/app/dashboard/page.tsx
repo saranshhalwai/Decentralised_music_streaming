@@ -22,6 +22,12 @@ export default function Dashboard() {
       return;
     }
 
+    // Check MetaMask
+    if (typeof window === "undefined" || !window.ethereum) {
+      setStatus("MetaMask is not installed. Please install it to upload tracks.");
+      return;
+    }
+
     setIsUploading(true);
     setStatus("Uploading to IPFS...");
 
@@ -37,8 +43,13 @@ export default function Dashboard() {
       // 3. Register on Smart Contract
       const { signer } = await getWeb3Provider();
       const registry = getMusicRegistryContract(signer);
-      
-      const tx = await registry.uploadTrack(title, artistName, genre, audioCid, coverCid);
+
+      // populateTransaction + sendTransaction is the correct ethers v6 way to force
+      // a write tx for functions that also declare return values (avoids static-call ambiguity)
+      const populated = await registry.uploadTrack.populateTransaction(
+        title, artistName, genre, audioCid, coverCid
+      );
+      const tx = await signer.sendTransaction(populated);
       setStatus("Transaction pending... Please wait.");
       await tx.wait();
 
@@ -52,8 +63,14 @@ export default function Dashboard() {
 
     } catch (error: unknown) {
       console.error(error);
-      const err = error as { reason?: string; message?: string };
-      setStatus(err.reason || err.message || "An error occurred during upload.");
+      const err = error as { reason?: string; message?: string; code?: string };
+      if (err.code === "ACTION_REJECTED") {
+        setStatus("Transaction rejected by user.");
+      } else if (err.message?.includes("network") || err.message?.includes("fetch")) {
+        setStatus("Cannot connect to blockchain. Is the local node running?");
+      } else {
+        setStatus(err.reason || err.message || "An error occurred during upload.");
+      }
       setIsUploading(false);
     }
   };

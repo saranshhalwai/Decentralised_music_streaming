@@ -24,8 +24,8 @@ export const uploadFileToIPFS = async (file: File) => {
   }
 };
 
-export const getIPFSUrl = (cid: string) => {
-  if (!cid || cid === "") return "";
-  const gateway = process.env.NEXT_PUBLIC_IPFS_GATEWAY || "cloudflare-ipfs.com";
+export const getIPFSUrl = (cid: string): string | null => {
+  if (!cid || cid.length < 10) return null;
+  const gateway = process.env.NEXT_PUBLIC_IPFS_GATEWAY || "gateway.pinata.cloud";
   return `https://${gateway}/ipfs/${cid}`;
 };

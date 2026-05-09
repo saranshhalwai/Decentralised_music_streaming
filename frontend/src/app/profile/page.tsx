@@ -47,15 +47,23 @@ export default function Profile() {
       const userBalance = await provider.getBalance(userAddress);
       setBalance(ethers.formatEther(userBalance).substring(0, 6));
 
-      // Fetch Artist Earnings
-      const paymentContract = getPaymentContract(provider);
-      const artistEarnings = await paymentContract.earningsOf(userAddress);
-      setEarnings(ethers.formatEther(artistEarnings));
+      // Fetch Artist Earnings (graceful fallback if contract not deployed)
+      try {
+        const paymentContract = getPaymentContract(provider);
+        const artistEarnings = await paymentContract.earningsOf(userAddress);
+        setEarnings(ethers.formatEther(artistEarnings));
+      } catch {
+        setEarnings("0.0");
+      }
 
-      // Fetch NFT Count
-      const nftContract = getMusicNFTContract(provider);
-      const balance = await nftContract.balanceOf(userAddress);
-      setNftCount(Number(balance));
+      // Fetch NFT Count (graceful fallback)
+      try {
+        const nftContract = getMusicNFTContract(provider);
+        const balance = await nftContract.balanceOf(userAddress);
+        setNftCount(Number(balance));
+      } catch {
+        setNftCount(0);
+      }
 
       // Fetch Artist Tracks
       const registryContract = getMusicRegistryContract(provider);

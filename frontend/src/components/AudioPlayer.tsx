@@ -23,9 +23,10 @@ const fallbackTrack = {
 };
 
 const GATEWAYS = [
+  `https://${process.env.NEXT_PUBLIC_IPFS_GATEWAY || "gateway.pinata.cloud"}/ipfs/`,
   "https://gateway.pinata.cloud/ipfs/",
-  "https://cloudflare-ipfs.com/ipfs/",
   "https://ipfs.io/ipfs/",
+  "https://nftstorage.link/ipfs/",
   "https://dweb.link/ipfs/"
 ];
 
@@ -53,8 +54,10 @@ export default function AudioPlayer() {
   // Construct the active URL based on current gateway index
   const activeSrc = useMemo(() => {
     if (!currentTrack || currentTrack.id === "sample") return fallbackTrack.src;
-    if (!currentTrack.ipfsCID) return "";
-    return `${GATEWAYS[gatewayIndex]}${currentTrack.ipfsCID}?filename=track.mp3`;
+    const cid = currentTrack.ipfsCID;
+    // Basic CID validation: must be non-empty and look like a real CID (min 10 chars)
+    if (!cid || cid.length < 10) return "";
+    return `${GATEWAYS[gatewayIndex]}${cid}`;
   }, [currentTrack, gatewayIndex]);
 
   // Unified Playback Control
@@ -67,19 +70,11 @@ export default function AudioPlayer() {
         if (audio.readyState === 0) audio.load();
         
         audio.play().catch(err => {
-          if (err.name !== "AbortError") {
-            console.error("Playback error:", err.name, activeSrc);
-            
-            if (gatewayIndex < GATEWAYS.length - 1) {
-              setError(`Gateway ${gatewayIndex + 1} slow, switching...`);
-              setTimeout(() => {
-                setGatewayIndex(prev => prev + 1);
-                audio.load();
-              }, 500);
-            } else {
-              setError("All IPFS gateways failed to serve this file.");
-              setIsPlaying(false);
-            }
+          // NotSupportedError means the audio element is already in an error state
+          // (failed to load from this gateway). onAudioError already handles gateway switching.
+          // AbortError means play() was interrupted by a pause/src change — safe to ignore.
+          if (err.name !== "AbortError" && err.name !== "NotSupportedError") {
+            console.warn("Playback error:", err.name, activeSrc);
           }
         });
       }
@@ -191,7 +186,6 @@ export default function AudioPlayer() {
         ref={audioRef} 
         src={activeSrc} 
         preload="auto"
-        crossOrigin="anonymous"
         onTimeUpdate={onTimeUpdate}
         onLoadedMetadata={onLoadedMetadata}
         onEnded={onEnded}
