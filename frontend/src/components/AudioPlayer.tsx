@@ -117,7 +117,7 @@ export default function AudioPlayer() {
       const paymentContract = getPaymentContract(signer);
       const streamFee = ethers.parseEther("0.0001");
       
-      const tx = await paymentContract.streamPayment(BigInt(trackId), { value: streamFee });
+      await paymentContract.streamPayment(BigInt(trackId), { value: streamFee });
       
       setError("Payment confirmed! Loading track...");
       setIsAwaitingPayment(false);

@@ -33,14 +33,17 @@ export default function Dashboard() {
       const address = await signer.getAddress();
       const registry = getMusicRegistryContract(provider);
       const tracks = await registry.getTracksByArtist(address);
-      setMyTracks(tracks.map((t: any) => ({ id: t.id.toString(), title: t.title })));
+      setMyTracks(tracks.map((t: { id: { toString: () => string }; title: string }) => ({ id: t.id.toString(), title: t.title })));
     } catch (e) {
       console.error(e);
     }
   }, []);
 
   useEffect(() => {
-    fetchMyTracks();
+    const load = async () => {
+      await fetchMyTracks();
+    };
+    load();
   }, [fetchMyTracks]);
 
   const handleUpload = async (e: React.FormEvent) => {
@@ -137,9 +140,10 @@ export default function Dashboard() {
       setShareStatus("Success! Revenue splits configured.");
       setShareholders([]);
       setSelectedTrackId("");
-    } catch (e: any) {
+    } catch (e: unknown) {
+      const err = e as { reason?: string; message?: string };
       console.error(e);
-      setShareStatus(e.reason || e.message || "Failed to set shares.");
+      setShareStatus(err.reason || err.message || "Failed to set shares.");
     } finally {
       setIsSettingShares(false);
     }

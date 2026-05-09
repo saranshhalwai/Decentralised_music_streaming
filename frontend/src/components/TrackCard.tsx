@@ -3,22 +3,21 @@
 import { Play, Disc, Heart, DollarSign, ExternalLink } from "lucide-react";
 import { Track } from "@/types/track";
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import Image from "next/image";
 
 const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=500&auto=format&fit=crop";
 
 export default function TrackCard({ track, onPlay }: { track: Track; onPlay: (track: Track) => void }) {
-  const [imgSrc, setImgSrc] = useState<string>(FALLBACK_IMAGE);
+  const [imgSrc, setImgSrc] = useState<string>(() => (track.coverUrl && track.coverUrl.length > 5) ? track.coverUrl : FALLBACK_IMAGE);
   const [retryCount, setRetryCount] = useState(0);
+  const [prevCoverUrl, setPrevCoverUrl] = useState(track.coverUrl);
 
-  useEffect(() => {
-    if (track.coverUrl && track.coverUrl.length > 5) {
-      setImgSrc(track.coverUrl);
-    } else {
-      setImgSrc(FALLBACK_IMAGE);
-    }
+  if (track.coverUrl !== prevCoverUrl) {
+    setImgSrc((track.coverUrl && track.coverUrl.length > 5) ? track.coverUrl : FALLBACK_IMAGE);
     setRetryCount(0);
-  }, [track.coverUrl]);
+    setPrevCoverUrl(track.coverUrl);
+  }
 
   const handlePlayClick = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -47,13 +46,13 @@ export default function TrackCard({ track, onPlay }: { track: Track; onPlay: (tr
   return (
     <div className="group relative rounded-2xl overflow-hidden bg-[#141414] border border-[#2a2a2a] hover:border-[#ff2a5f]/50 transition-all duration-300 shadow-xl">
       <div className="aspect-square relative overflow-hidden bg-gradient-to-br from-[#1a1a1a] to-[#0d0d0d] flex items-center justify-center">
-        {/* Using native img tag to bypass Next.js Image component domain restrictions and optimization overhead for decentralized sources */}
-        <img 
+        <Image 
           src={imgSrc} 
           alt={track.title} 
           onError={handleImageError}
+          fill
+          unoptimized
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 relative z-0"
-          loading="lazy"
         />
         
         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-4 z-10">
@@ -93,7 +92,7 @@ export default function TrackCard({ track, onPlay }: { track: Track; onPlay: (tr
                   const tx = await payment.tipTrack(BigInt(track.id), { value: ethers.parseEther("0.001") });
                   await tx.wait();
                   alert("Quick tip sent!");
-                } catch (err) {
+                } catch {
                   alert("Tip failed.");
                 }
               }}

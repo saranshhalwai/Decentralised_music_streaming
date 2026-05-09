@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
-import { User, Wallet, ArrowUpRight, Music, TrendingUp, DollarSign, Download, Loader2, AlertCircle, CheckCircle2, Award, Tag } from "lucide-react";
+import { User, Wallet, Music, TrendingUp, Download, Loader2, AlertCircle, CheckCircle2, Award, Tag } from "lucide-react";
 import { getWeb3Provider, formatAddress } from "@/lib/web3";
 import { getMusicRegistryContract, getPaymentContract, getMusicNFTContract, getMarketplaceContract, MARKETPLACE_ADDRESS } from "@/lib/contracts";
 import { ethers } from "ethers";
@@ -9,7 +9,6 @@ import { useAudioPlayer } from "@/context/AudioPlayerContext";
 import TrackCard from "@/components/TrackCard";
 import { Track } from "@/types/track";
 import { getIPFSUrl } from "@/lib/ipfs";
-import { EthersError } from "@/types/global.d";
 import Image from "next/image";
 
 interface RawTrack {
@@ -141,8 +140,9 @@ export default function Profile() {
       await tx.wait();
       setTxStatus({ type: 'success', message: 'Earnings successfully withdrawn!' });
       fetchProfileData();
-    } catch (err: any) {
-      setTxStatus({ type: 'error', message: err.message || 'Withdrawal failed.' });
+    } catch (err: unknown) {
+      const error = err as Error;
+      setTxStatus({ type: 'error', message: error.message || 'Withdrawal failed.' });
     } finally {
       setIsWithdrawing(false);
     }
@@ -169,7 +169,7 @@ export default function Profile() {
 
       setTxStatus({ type: 'success', message: `NFT #${tokenId} listed for ${price} ETH!` });
       fetchProfileData();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
       setTxStatus({ type: 'error', message: "Listing failed." });
     }

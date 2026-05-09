@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { getReadOnlyProvider, getWeb3Provider } from "@/lib/web3";
 import { getDisputeResolutionContract } from "@/lib/contracts";
 import { ethers } from "ethers";
@@ -19,12 +19,14 @@ interface Dispute {
 export default function DisputePage() {
   const [disputes, setDisputes] = useState<{ id: bigint, dispute: Dispute }[]>([]);
   const [loading, setLoading] = useState(true);
+  const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
-    fetchDisputes();
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
   }, []);
 
-  const fetchDisputes = async () => {
+  const fetchDisputes = useCallback(async () => {
     try {
       setLoading(true);
       const provider = getReadOnlyProvider();
@@ -42,7 +44,14 @@ export default function DisputePage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      void fetchDisputes();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [fetchDisputes]);
 
   const handleVote = async (disputeId: bigint, voteForChallenger: boolean) => {
     try {
@@ -113,7 +122,7 @@ export default function DisputePage() {
                   </h3>
                   <p className="text-gray-400 text-sm mt-1">Challenger: {dispute.challenger}</p>
                 </div>
-                {!dispute.resolved && Number(dispute.endTime) * 1000 < Date.now() && (
+                {!dispute.resolved && Number(dispute.endTime) * 1000 < now && (
                   <button 
                     onClick={() => handleResolve(id)}
                     className="mt-4 md:mt-0 px-4 py-2 bg-white text-black font-bold rounded-lg hover:bg-gray-200"
@@ -124,7 +133,7 @@ export default function DisputePage() {
               </div>
               
               <div className="bg-[#0a0a0a] rounded-xl p-4 mb-6 border border-white/5">
-                <p className="text-gray-300 italic">"{dispute.reason}"</p>
+                <p className="text-gray-300 italic">&quot;{dispute.reason}&quot;</p>
               </div>
               
               <div className="grid grid-cols-2 gap-4">

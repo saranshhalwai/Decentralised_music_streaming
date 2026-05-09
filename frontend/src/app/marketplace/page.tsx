@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { getReadOnlyProvider, getWeb3Provider } from "@/lib/web3";
 import { getMarketplaceContract, getMusicNFTContract, getMusicRegistryContract } from "@/lib/contracts";
 import { ethers } from "ethers";
@@ -22,11 +22,7 @@ export default function MarketplacePage() {
   const [listings, setListings] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchListings();
-  }, []);
-
-  const fetchListings = async () => {
+  const fetchListings = useCallback(async () => {
     try {
       setLoading(true);
       const provider = getReadOnlyProvider();
@@ -63,7 +59,14 @@ export default function MarketplacePage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      void fetchListings();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [fetchListings]);
 
   const handleBuy = async (tokenId: bigint, price: bigint) => {
     try {
