@@ -3,6 +3,7 @@
 import { Play, Disc, Heart, DollarSign, ExternalLink } from "lucide-react";
 import { Track } from "@/types/track";
 import Link from "next/link";
+import { getIPFSUrl } from "@/lib/ipfs";
 import { useState, useEffect } from "react";
 
 const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=500&auto=format&fit=crop";
@@ -26,16 +27,29 @@ export default function TrackCard({ track, onPlay }: { track: Track; onPlay: (tr
     onPlay(track);
   };
 
+  const sanitizeCid = (cid?: string) => {
+    if (!cid) return "";
+    let s = cid;
+    if (s.startsWith("ipfs://")) s = s.replace(/^ipfs:\/\//, "");
+    if (s.startsWith("/ipfs/")) s = s.replace(/^\/ipfs\//, "");
+    return s;
+  };
+
   const handleImageError = () => {
     if (track.coverArtCID) {
+      const sanitized = sanitizeCid(track.coverArtCID);
       if (retryCount === 0) {
-        console.log(`Pinata failed for ${track.title}, trying Cloudflare...`);
-        setImgSrc(`https://cloudflare-ipfs.com/ipfs/${track.coverArtCID}`);
+        console.log(`Primary gateway failed for ${track.title}, trying pinata gateway...`);
+        setImgSrc(getIPFSUrl(sanitized));
         setRetryCount(1);
       } else if (retryCount === 1) {
-        console.log(`Cloudflare failed for ${track.title}, trying ipfs.io...`);
-        setImgSrc(`https://ipfs.io/ipfs/${track.coverArtCID}`);
+        console.log(`Pinata failed for ${track.title}, trying Cloudflare...`);
+        setImgSrc(`https://cloudflare-ipfs.com/ipfs/${sanitized}`);
         setRetryCount(2);
+      } else if (retryCount === 2) {
+        console.log(`Cloudflare failed for ${track.title}, trying ipfs.io...`);
+        setImgSrc(`https://ipfs.io/ipfs/${sanitized}`);
+        setRetryCount(3);
       } else {
         setImgSrc(FALLBACK_IMAGE);
       }

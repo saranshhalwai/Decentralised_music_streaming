@@ -84,16 +84,29 @@ export default function TrackDetails() {
     }
   };
 
+  const sanitizeCid = (cid?: string) => {
+    if (!cid) return "";
+    let s = cid;
+    if (s.startsWith("ipfs://")) s = s.replace(/^ipfs:\/\//, "");
+    if (s.startsWith("/ipfs/")) s = s.replace(/^\/ipfs\//, "");
+    return s;
+  };
+
   const handleImageError = () => {
     if (track?.coverArtCID) {
+      const sanitized = sanitizeCid(track.coverArtCID);
       if (retryCount === 0) {
-        console.log(`Pinata failed for detail view, trying Cloudflare...`);
-        setImgSrc(`https://cloudflare-ipfs.com/ipfs/${track.coverArtCID}`);
+        console.log(`Primary gateway failed for detail view, trying pinata gateway...`);
+        setImgSrc(getIPFSUrl(sanitized));
         setRetryCount(1);
       } else if (retryCount === 1) {
-        console.log(`Cloudflare failed for detail view, trying ipfs.io...`);
-        setImgSrc(`https://ipfs.io/ipfs/${track.coverArtCID}`);
+        console.log(`Pinata failed for detail view, trying Cloudflare...`);
+        setImgSrc(`https://cloudflare-ipfs.com/ipfs/${sanitized}`);
         setRetryCount(2);
+      } else if (retryCount === 2) {
+        console.log(`Cloudflare failed for detail view, trying ipfs.io...`);
+        setImgSrc(`https://ipfs.io/ipfs/${sanitized}`);
+        setRetryCount(3);
       } else {
         setImgSrc(FALLBACK_IMAGE);
       }

@@ -29,19 +29,22 @@ export const uploadFileToIPFS = async (file: File) => {
  * Uses the primary gateway if set, otherwise falls back to reliable public gateways.
  */
 export const getIPFSUrl = (cid: string): string => {
-  if (!cid || cid.length < 10) return "";
-  
-  // If the CID is already a URL, return it
+  if (!cid) return "";
+
+  // If the CID is already a full URL, return it
   if (cid.startsWith("http")) return cid;
 
+  // Normalize common ipfs prefixes
+  let normalized = cid;
+  if (normalized.startsWith("ipfs://")) normalized = normalized.replace(/^ipfs:\/\//, "");
+  if (normalized.startsWith("/ipfs/")) normalized = normalized.replace(/^\/ipfs\//, "");
+
   const customGateway = process.env.NEXT_PUBLIC_IPFS_GATEWAY;
-  
-  // If user has a custom gateway, we use it as primary
   if (customGateway) {
-    const cleanGateway = customGateway.replace("https://", "").replace("/ipfs/", "");
-    return `https://${cleanGateway}/ipfs/${cid}`;
+    const cleanGateway = customGateway.replace(/^https?:\/\//, "").replace(/\/ipfs\//, "");
+    return `https://${cleanGateway}/ipfs/${normalized}`;
   }
 
-  // Fallback order: Pinata Public -> Cloudflare
-  return `https://gateway.pinata.cloud/ipfs/${cid}`;
+  // Default to Pinata gateway
+  return `https://gateway.pinata.cloud/ipfs/${normalized}`;
 };
