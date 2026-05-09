@@ -50,3 +50,10 @@ export const getMarketplaceContract = (signerOrProvider: Signer | Provider) => {
 export const getGovernanceTokenContract = (signerOrProvider: Signer | Provider) => {
   return new Contract(GOVERNANCE_TOKEN_ADDRESS, BeatTokenABI, signerOrProvider);
 };
+
+import ConcertManager from './abis/ConcertManager.json';
+export const CONCERT_MANAGER_ADDRESS = process.env.NEXT_PUBLIC_CONCERT_MANAGER_ADDRESS || "0x0000000000000000000000000000000000000000";
+export const ConcertManagerABI = ConcertManager.abi;
+export const getConcertManagerContract = (signerOrProvider: Signer | Provider) => {
+  return new Contract(CONCERT_MANAGER_ADDRESS, ConcertManagerABI, signerOrProvider);
+};

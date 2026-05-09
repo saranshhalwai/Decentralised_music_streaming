@@ -29,8 +29,7 @@ contract BeatToken is ERC20, ERC20Permit, ERC20Votes, Ownable {
     /**
      * @notice Allows the minter (MusicRegistry) or the owner to reward contributors.
      */
-    function mint(address to, uint256 amount) public {
-        require(msg.sender == owner() || msg.sender == minter, "Not authorized to mint");
+    function mint(address to, uint256 amount) public onlyOwner {
         _mint(to, amount);
     }
 

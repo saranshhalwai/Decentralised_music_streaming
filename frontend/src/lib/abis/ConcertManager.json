@@ -1,0 +1,88 @@
+{
+  "abi": [
+    {
+      "inputs": [],
+      "name": "totalConcerts",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "concertId",
+          "type": "uint256"
+        }
+      ],
+      "name": "getConcert",
+      "outputs": [
+        {
+          "components": [
+            { "internalType": "uint256", "name": "id", "type": "uint256" },
+            { "internalType": "address", "name": "artist", "type": "address" },
+            { "internalType": "string", "name": "title", "type": "string" },
+            { "internalType": "uint256", "name": "date", "type": "uint256" },
+            { "internalType": "string", "name": "location", "type": "string" },
+            { "internalType": "uint256", "name": "price", "type": "uint256" },
+            { "internalType": "uint256", "name": "totalTickets", "type": "uint256" },
+            { "internalType": "uint256", "name": "ticketsSold", "type": "uint256" },
+            { "internalType": "string", "name": "baseURI", "type": "string" },
+            { "internalType": "bool", "name": "exists", "type": "bool" }
+          ],
+          "internalType": "struct ConcertManager.Concert",
+          "name": "",
+          "type": "tuple"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        { "internalType": "string", "name": "title", "type": "string" },
+        { "internalType": "uint256", "name": "date", "type": "uint256" },
+        { "internalType": "string", "name": "location", "type": "string" },
+        { "internalType": "uint256", "name": "price", "type": "uint256" },
+        { "internalType": "uint256", "name": "totalTickets", "type": "uint256" },
+        { "internalType": "string", "name": "baseURI", "type": "string" }
+      ],
+      "name": "createConcert",
+      "outputs": [
+        { "internalType": "uint256", "name": "", "type": "uint256" }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [{ "internalType": "uint256", "name": "concertId", "type": "uint256" }],
+      "name": "buyTicket",
+      "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+      "stateMutability": "payable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        { "internalType": "uint256", "name": "concertId", "type": "uint256" },
+        { "internalType": "uint256", "name": "newPrice", "type": "uint256" }
+      ],
+      "name": "setTicketPrice",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "withdraw",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ]
+}
