@@ -10,6 +10,7 @@ import { getMusicRegistryContract, getDisputeResolutionContract, getMusicNFTCont
 import { getIPFSUrl } from "@/lib/ipfs";
 import { useAudioPlayer } from "@/context/AudioPlayerContext";
 import Image from "next/image";
+import ArtistNotifications from "@/components/ArtistNotifications";
 
 const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=500&auto=format&fit=crop";
 
@@ -254,6 +255,7 @@ export default function TrackDetails() {
               </div>
               <h1 className="text-5xl md:text-7xl font-black mb-4 tracking-tighter">{track.title}</h1>
               <p className="text-2xl text-gray-400 font-medium">by {track.artist_name}</p>
+              <ArtistNotifications artistAddress={track.artist_address} />
             </div>
             <div className="flex flex-col gap-2">
               {isOwner && (

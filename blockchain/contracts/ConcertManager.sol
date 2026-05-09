@@ -122,4 +122,72 @@ contract ConcertManager is Ownable {
         if (_nextConcertId == 1) return 0;
         return _nextConcertId - 1;
     }
+
+    // -------------------------------------------------------------------------
+    // Notifications
+    // -------------------------------------------------------------------------
+    uint256 private _nextNotificationId;
+    struct Notification {
+        uint256 id;
+        address artist;
+        uint256 concertId;
+        string message;
+        uint256 timestamp;
+        bool active;
+    }
+
+    mapping(uint256 => Notification) public notifications;
+    mapping(address => uint256[]) private _artistNotifications;
+
+    event NotificationAdded(uint256 indexed id, address indexed artist, uint256 indexed concertId, string message);
+    event NotificationRemoved(uint256 indexed id, address indexed artist);
+
+    function addNotification(uint256 concertId, string calldata message) external returns (uint256) {
+        Concert storage c = concerts[concertId];
+        require(c.exists, "Concert: not found");
+        require(c.artist == msg.sender, "Concert: only artist");
+        require(bytes(message).length > 0 && bytes(message).length <= 512, "Concert: invalid message");
+
+        uint256 nid = _nextNotificationId;
+        _nextNotificationId++;
+
+        notifications[nid] = Notification({
+            id: nid,
+            artist: msg.sender,
+            concertId: concertId,
+            message: message,
+            timestamp: block.timestamp,
+            active: true
+        });
+
+        _artistNotifications[msg.sender].push(nid);
+        emit NotificationAdded(nid, msg.sender, concertId, message);
+        return nid;
+    }
+
+    function removeNotification(uint256 notificationId) external {
+        Notification storage n = notifications[notificationId];
+        require(n.artist == msg.sender, "Concert: not artist");
+        require(n.active, "Concert: already removed");
+        n.active = false;
+        emit NotificationRemoved(notificationId, msg.sender);
+    }
+
+    function getNotificationsByArtist(address artist) external view returns (Notification[] memory) {
+        uint256[] storage ids = _artistNotifications[artist];
+        uint256 activeCount = 0;
+        for (uint256 i = 0; i < ids.length; i++) {
+            if (notifications[ids[i]].active) activeCount++;
+        }
+        Notification[] memory result = new Notification[](activeCount);
+        uint256 idx = 0;
+        for (uint256 i = 0; i < ids.length; i++) {
+            Notification memory n = notifications[ids[i]];
+            if (n.active) {
+                result[idx] = n;
+                idx++;
+            }
+        }
+        return result;
+    }
 }

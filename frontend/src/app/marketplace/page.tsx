@@ -21,6 +21,7 @@ interface Listing {
 export default function MarketplacePage() {
   const [listings, setListings] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(true);
+  const [buyingIds, setBuyingIds] = useState<Record<string, boolean>>({});
 
   const fetchListings = useCallback(async () => {
     try {
@@ -33,7 +34,11 @@ export default function MarketplacePage() {
       const activeTokenIds = await marketplace.getActiveListings();
       const loadedListings: Listing[] = [];
 
-      for (const tokenId of activeTokenIds) {
+      // Deduplicate token IDs — some deployments may have duplicates in the active list.
+      const uniqueIds = Array.from(new Set(activeTokenIds.map((id: any) => id.toString())));
+
+      for (const tokenIdStr of uniqueIds) {
+        const tokenId = BigInt(tokenIdStr);
         try {
           const listing = await marketplace.getListing(tokenId);
           const nftData = await nftContract.getCollectible(tokenId);
@@ -49,7 +54,7 @@ export default function MarketplacePage() {
             coverUrl: getIPFSUrl(track.coverArtCID)
           });
         } catch (e) {
-          console.error(`Error loading details for token ${tokenId}`, e);
+          console.error(`Error loading details for token ${tokenIdStr}`, e);
         }
       }
 
@@ -69,23 +74,27 @@ export default function MarketplacePage() {
   }, [fetchListings]);
 
   const handleBuy = async (tokenId: bigint, price: bigint) => {
+    const idStr = tokenId.toString();
+    if (buyingIds[idStr]) {
+      alert("Purchase already in progress for this item.");
+      return;
+    }
+
     try {
+      setBuyingIds(prev => ({ ...prev, [idStr]: true }));
       const { signer } = await getWeb3Provider();
       const marketplace = getMarketplaceContract(signer);
-      
-      // Calculate total cost (price + fee)
-      // Note: In your contract, the seller receives (price - fee). 
-      // The buyer pays exactly 'price'. 
-      // Let's re-verify contract: buyNFT requires msg.value == listing.price.
-      
+
       const tx = await marketplace.buyNFT(tokenId, { value: price });
       alert("Purchase transaction sent. Waiting for confirmation...");
       await tx.wait();
       alert("Successfully purchased NFT!");
-      fetchListings();
+      await fetchListings();
     } catch (e) {
       console.error(e);
       alert("Failed to buy NFT.");
+    } finally {
+      setBuyingIds(prev => { const copy = { ...prev }; delete copy[idStr]; return copy; });
     }
   };
 
@@ -129,7 +138,8 @@ export default function MarketplacePage() {
                 <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center px-6">
                    <button 
                      onClick={() => handleBuy(l.tokenId, l.price)}
-                     className="w-full py-3 bg-[#ff2a5f] text-white font-bold rounded-xl shadow-lg hover:scale-105 active:scale-95 transition-transform flex items-center justify-center gap-2"
+                     disabled={!!buyingIds[l.tokenId.toString()]}
+                     className={`w-full py-3 bg-[#ff2a5f] text-white font-bold rounded-xl shadow-lg ${buyingIds[l.tokenId.toString()] ? 'opacity-60 cursor-not-allowed' : 'hover:scale-105 active:scale-95'} transition-transform flex items-center justify-center gap-2`}
                    >
                      <ShoppingCart className="w-4 h-4" />
                      Buy for {ethers.formatEther(l.price)} ETH
