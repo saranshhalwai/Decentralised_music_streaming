@@ -70,6 +70,22 @@ async function main() {
   const marketplaceAddress = await marketplace.getAddress();
   console.log("✅ MusicMarketplace deployed to:", marketplaceAddress);
 
+  // 8. TicketNFT
+  console.log("\nDeploying TicketNFT...");
+  const TicketNFT = await ethers.getContractFactory("TicketNFT");
+  const ticketNFT = await TicketNFT.deploy("BeatChain Tickets", "BCTKT");
+  await ticketNFT.waitForDeployment();
+  const ticketNFTAddress = await ticketNFT.getAddress();
+  console.log("✅ TicketNFT deployed to:", ticketNFTAddress);
+
+  // 9. ConcertManager
+  console.log("\nDeploying ConcertManager...");
+  const ConcertManager = await ethers.getContractFactory("ConcertManager");
+  const concertManager = await ConcertManager.deploy(ticketNFTAddress);
+  await concertManager.waitForDeployment();
+  const concertManagerAddress = await concertManager.getAddress();
+  console.log("✅ ConcertManager deployed to:", concertManagerAddress);
+
   // Post-Deploy Wiring
   console.log("\nExecuting Post-Deploy Wiring...");
   
@@ -88,6 +104,9 @@ async function main() {
   await sharedOwnership.setDisputeResolution(disputeResolutionAddress);
   console.log("✅ sharedOwnership.setDisputeResolution configured");
 
+  await ticketNFT.setMinter(concertManagerAddress);
+  console.log("✅ ticketNFT.setMinter (ConcertManager) configured");
+
   // Summary
   console.log("\n========================================");
   console.log("📋 Deployment Summary");
@@ -100,6 +119,8 @@ async function main() {
   console.log(`SharedOwnership:   ${sharedOwnershipAddress}`);
   console.log(`DisputeResolution: ${disputeResolutionAddress}`);
   console.log(`MusicMarketplace:  ${marketplaceAddress}`);
+  console.log(`TicketNFT:         ${ticketNFTAddress}`);
+  console.log(`ConcertManager:    ${concertManagerAddress}`);
   console.log("========================================");
   console.log("\n⚠️  Save these addresses! Update your frontend .env with them.");
 }

@@ -83,6 +83,38 @@
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
+    },
+    {
+      "inputs": [
+        { "internalType": "address", "name": "artist", "type": "address" }
+      ],
+      "name": "getNotificationsByArtist",
+      "outputs": [
+        {
+          "components": [
+            { "internalType": "uint256", "name": "id", "type": "uint256" },
+            { "internalType": "uint256", "name": "concertId", "type": "uint256" },
+            { "internalType": "address", "name": "buyer", "type": "address" },
+            { "internalType": "uint256", "name": "timestamp", "type": "uint256" },
+            { "internalType": "bool", "name": "read", "type": "bool" }
+          ],
+          "internalType": "struct ConcertManager.Notification[]",
+          "name": "",
+          "type": "tuple[]"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        { "internalType": "address", "name": "artist", "type": "address" },
+        { "internalType": "uint256", "name": "notificationIndex", "type": "uint256" }
+      ],
+      "name": "markNotificationAsRead",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
     }
   ]
 }

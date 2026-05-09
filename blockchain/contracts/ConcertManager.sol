@@ -27,13 +27,23 @@ contract ConcertManager is Ownable {
         bool exists;
     }
 
+    struct Notification {
+        uint256 id;
+        uint256 concertId;
+        address buyer;
+        uint256 timestamp;
+        bool read;
+    }
+
     mapping(uint256 => Concert) public concerts;
     mapping(address => uint256) public pendingWithdrawals;
+    mapping(address => Notification[]) public artistNotifications;
 
     event ConcertCreated(uint256 indexed concertId, address indexed artist, string title, uint256 date, string location, uint256 price, uint256 totalTickets, string baseURI);
     event TicketPurchased(uint256 indexed concertId, uint256 indexed tokenId, address indexed buyer, uint256 price);
     event TicketPriceUpdated(uint256 indexed concertId, uint256 oldPrice, uint256 newPrice);
     event Withdraw(address indexed to, uint256 amount);
+    event NotificationCreated(address indexed artist, uint256 indexed concertId, address indexed buyer);
 
     constructor(address ticketAddress) Ownable(msg.sender) {
         ticketContract = ITicketNFT(ticketAddress);
@@ -97,7 +107,17 @@ contract ConcertManager is Ownable {
         c.ticketsSold += 1;
         pendingWithdrawals[c.artist] += msg.value;
 
+        // Add notification for artist
+        artistNotifications[c.artist].push(Notification({
+            id: artistNotifications[c.artist].length + 1,
+            concertId: concertId,
+            buyer: msg.sender,
+            timestamp: block.timestamp,
+            read: false
+        }));
+
         emit TicketPurchased(concertId, tokenId, msg.sender, msg.value);
+        emit NotificationCreated(c.artist, concertId, msg.sender);
         return tokenId;
     }
 
@@ -121,5 +141,15 @@ contract ConcertManager is Ownable {
     function totalConcerts() external view returns (uint256) {
         if (_nextConcertId == 1) return 0;
         return _nextConcertId - 1;
+    }
+
+    function getNotificationsByArtist(address artist) external view returns (Notification[] memory) {
+        return artistNotifications[artist];
+    }
+
+    function markNotificationAsRead(address artist, uint256 notificationIndex) external {
+        require(msg.sender == artist, "Concert: only artist");
+        require(notificationIndex < artistNotifications[artist].length, "Concert: invalid index");
+        artistNotifications[artist][notificationIndex].read = true;
     }
 }
