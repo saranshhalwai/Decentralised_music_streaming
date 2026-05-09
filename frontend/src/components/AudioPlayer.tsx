@@ -9,19 +9,6 @@ import { ethers } from "ethers";
 import Image from "next/image";
 import { EthersError } from "@/types/global.d";
 
-const fallbackTrack = {
-  id: "sample",
-  title: "Demo BeatChain Track",
-  artist_name: "Sample Artist",
-  genre: "Sample",
-  coverArtCID: "",
-  src: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
-  artist_address: "0x0000000000000000000000000000000000000000",
-  ipfsCID: "",
-  coverUrl: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?q=80&w=400&auto=format&fit=crop",
-  playCount: BigInt(0)
-};
-
 const GATEWAYS = [
   `https://${process.env.NEXT_PUBLIC_IPFS_GATEWAY || "gateway.pinata.cloud"}/ipfs/`,
   "https://gateway.pinata.cloud/ipfs/",
@@ -51,12 +38,10 @@ export default function AudioPlayer() {
   
   const lastTrackId = useRef<string | null>(null);
 
-  const track = useMemo(() => currentTrack ?? fallbackTrack, [currentTrack]);
-
   // Strategy: Try streaming first. If it fails multiple times, fetch the whole blob.
   const activeSrc = useMemo(() => {
+    if (!currentTrack) return "";
     if (useBlobUrl) return useBlobUrl;
-    if (!currentTrack || currentTrack.id === "sample") return fallbackTrack.src;
     const cid = currentTrack.ipfsCID;
     if (!cid || cid.length < 10) return "";
     return `${GATEWAYS[gatewayIndex]}${cid}`;
@@ -65,12 +50,9 @@ export default function AudioPlayer() {
   // Unified Playback Control
   useEffect(() => {
     const audio = audioRef.current;
-    if (!audio) return;
+    if (!audio || !currentTrack) return;
 
-    // Only play if we have paid (or it's a sample)
-    const canPlay = hasPaid || track.id === "sample";
-
-    if (isPlaying && !isAwaitingPayment && canPlay) {
+    if (isPlaying && !isAwaitingPayment && hasPaid) {
       if (activeSrc.length > 0) {
         if (audio.readyState === 0) audio.load();
         
@@ -86,14 +68,13 @@ export default function AudioPlayer() {
     } else {
       audio.pause();
     }
-  }, [isPlaying, isAwaitingPayment, hasPaid, track.id, activeSrc, audioRef]);
+  }, [isPlaying, isAwaitingPayment, hasPaid, currentTrack, activeSrc, audioRef]);
 
   const fetchFullTrackAsBlob = useCallback(async (cid: string) => {
     try {
       setIsLoading(true);
       setError("Optimizing playback for your connection...");
       
-      // Try the fastest gateway for a full download
       const response = await fetch(`${GATEWAYS[gatewayIndex]}${cid}`);
       if (!response.ok) throw new Error("Gateway failed");
       
@@ -111,8 +92,10 @@ export default function AudioPlayer() {
 
   const triggerPayment = useCallback(async (trackId: string) => {
     try {
-      if (trackId === "sample") return true;
-      if (!PAYMENT_ADDRESS || PAYMENT_ADDRESS.startsWith("0x0000")) return true;
+      if (!PAYMENT_ADDRESS || PAYMENT_ADDRESS.startsWith("0x0000")) {
+        setHasPaid(true);
+        return true;
+      }
 
       setIsAwaitingPayment(true);
       setError("Please confirm the stream payment (0.0001 ETH) in MetaMask...");
@@ -157,15 +140,10 @@ export default function AudioPlayer() {
         setCurrentTime(0);
         setDuration(0);
         
-        if (currentTrack.id !== "sample") {
-          setIsLoading(true);
-          const paymentSuccessful = await triggerPayment(currentTrack.id);
-          if (paymentSuccessful) {
-            setIsPlaying(true);
-          }
-        } else {
-           setHasPaid(true);
-           setIsPlaying(true);
+        setIsLoading(true);
+        const paymentSuccessful = await triggerPayment(currentTrack.id);
+        if (paymentSuccessful) {
+          setIsPlaying(true);
         }
       }, 0);
     }
@@ -226,6 +204,11 @@ export default function AudioPlayer() {
     if (!isAwaitingPayment) setError(null);
   }, [isAwaitingPayment]);
 
+  // If no track is selected, don't show the player
+  if (!currentTrack) return null;
+
+  const track = currentTrack;
+
   return (
     <div className="fixed bottom-0 w-full glass-panel border-t border-white/10 z-50 px-4 py-3">
       <audio 
@@ -244,14 +227,16 @@ export default function AudioPlayer() {
         {/* Track Info */}
         <div className="flex items-center gap-4 w-full md:w-1/4">
           <div className="w-12 h-12 bg-gradient-to-tr from-[#ff2a5f] to-[#ff7e40] rounded-md shadow-lg overflow-hidden relative">
-            <Image 
-              src={track.coverUrl || fallbackTrack.coverUrl} 
-              alt="Cover" 
-              fill
-              unoptimized
-              sizes="48px"
-              className="object-cover" 
-            />
+            {track.coverUrl && (
+              <Image 
+                src={track.coverUrl} 
+                alt="Cover" 
+                fill
+                unoptimized
+                sizes="48px"
+                className="object-cover" 
+              />
+            )}
             {(isLoading || isAwaitingPayment) && (
               <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
                 <Loader2 className="w-6 h-6 text-white animate-spin" />
@@ -261,19 +246,17 @@ export default function AudioPlayer() {
           <div className="overflow-hidden">
             <h4 className="text-sm font-bold text-white line-clamp-1">{track.title}</h4>
             <p className="text-xs text-gray-400 truncate">{track.artist_name}</p>
-            {track.id !== "sample" && (
-              <div className="flex items-center gap-2 mt-0.5">
-               <a 
-                 href={activeSrc} 
-                 target="_blank" 
-                 rel="noopener noreferrer"
-                 className="text-[10px] text-[#ff2a5f] hover:underline flex items-center gap-1"
-               >
-                 <ExternalLink className="w-2 h-2" /> IPFS Source
-               </a>
-               {useBlobUrl && <span className="text-[10px] text-green-500 font-bold flex items-center gap-0.5"><Download className="w-2 h-2" /> Cached</span>}
-              </div>
-            )}
+            <div className="flex items-center gap-2 mt-0.5">
+             <a 
+               href={activeSrc} 
+               target="_blank" 
+               rel="noopener noreferrer"
+               className="text-[10px] text-[#ff2a5f] hover:underline flex items-center gap-1"
+             >
+               <ExternalLink className="w-2 h-2" /> IPFS Source
+             </a>
+             {useBlobUrl && <span className="text-[10px] text-green-500 font-bold flex items-center gap-0.5"><Download className="w-2 h-2" /> Cached</span>}
+            </div>
           </div>
         </div>
 
@@ -292,7 +275,7 @@ export default function AudioPlayer() {
             <button
               disabled={isAwaitingPayment}
               onClick={async () => {
-                if (!hasPaid && track.id !== "sample") {
+                if (!hasPaid) {
                   await triggerPayment(track.id);
                 } else {
                   setIsPlaying(!isPlaying);
