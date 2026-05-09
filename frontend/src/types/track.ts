@@ -10,4 +10,5 @@ export interface Track {
   coverUrl: string;
   playCount: number | bigint;
   timestamp?: bigint;
+  duration?: string;
 }
