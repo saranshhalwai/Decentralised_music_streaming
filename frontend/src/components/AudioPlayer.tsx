@@ -45,6 +45,7 @@ export default function AudioPlayer() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isAwaitingPayment, setIsAwaitingPayment] = useState(false);
+  const [hasPaid, setHasPaid] = useState(false);
   const [gatewayIndex, setGatewayIndex] = useState(0);
   const [useBlobUrl, setUseBlobUrl] = useState<string | null>(null);
   
@@ -66,7 +67,10 @@ export default function AudioPlayer() {
     const audio = audioRef.current;
     if (!audio) return;
 
-    if (isPlaying && !isAwaitingPayment) {
+    // Only play if we have paid (or it's a sample)
+    const canPlay = hasPaid || track.id === "sample";
+
+    if (isPlaying && !isAwaitingPayment && canPlay) {
       if (activeSrc.length > 0) {
         if (audio.readyState === 0) audio.load();
         
@@ -82,7 +86,7 @@ export default function AudioPlayer() {
     } else {
       audio.pause();
     }
-  }, [isPlaying, isAwaitingPayment, activeSrc, audioRef]);
+  }, [isPlaying, isAwaitingPayment, hasPaid, track.id, activeSrc, audioRef]);
 
   const fetchFullTrackAsBlob = useCallback(async (cid: string) => {
     try {
@@ -117,10 +121,12 @@ export default function AudioPlayer() {
       const paymentContract = getPaymentContract(signer);
       const streamFee = ethers.parseEther("0.0001");
       
-      await paymentContract.streamPayment(BigInt(trackId), { value: streamFee });
+      const tx = await paymentContract.streamPayment(BigInt(trackId), { value: streamFee });
+      await tx.wait(); // Wait for confirmation
       
       setError("Payment confirmed! Loading track...");
       setIsAwaitingPayment(false);
+      setHasPaid(true); // Explicitly mark as paid
       return true;
     } catch (err: unknown) {
       const error = err as EthersError;
@@ -142,6 +148,7 @@ export default function AudioPlayer() {
       
       lastTrackId.current = currentTrack.id;
       setIsPlaying(false);
+      setHasPaid(false); // Reset for new track
       
       setTimeout(async () => {
         setError(null);
@@ -157,6 +164,7 @@ export default function AudioPlayer() {
             setIsPlaying(true);
           }
         } else {
+           setHasPaid(true);
            setIsPlaying(true);
         }
       }, 0);
@@ -283,7 +291,13 @@ export default function AudioPlayer() {
             
             <button
               disabled={isAwaitingPayment}
-              onClick={() => setIsPlaying(!isPlaying)}
+              onClick={async () => {
+                if (!hasPaid && track.id !== "sample") {
+                  await triggerPayment(track.id);
+                } else {
+                  setIsPlaying(!isPlaying);
+                }
+              }}
               className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
                 isAwaitingPayment 
                 ? "bg-gray-600 cursor-wait" 
