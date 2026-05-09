@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
+import "@openzeppelin/contracts/access/Ownable.sol";
+
 /// @title MusicRegistry
 /// @notice On-chain catalog of music tracks. Artists register tracks (stored on IPFS)
 ///         and fans can increment play counts.
-contract MusicRegistry {
+contract MusicRegistry is Ownable {
     // -------------------------------------------------------------------------
     // Data structures
     // -------------------------------------------------------------------------
@@ -34,6 +36,8 @@ contract MusicRegistry {
     /// artist address => list of trackIds they own
     mapping(address => uint256[]) private _artistTracks;
 
+    address public disputeResolver;
+
     // -------------------------------------------------------------------------
     // Events
     // -------------------------------------------------------------------------
@@ -42,6 +46,7 @@ contract MusicRegistry {
         uint256 indexed trackId,
         address indexed artist,
         string title,
+        string artistName,
         string genre,
         string ipfsCID,
         string coverArtCID,
@@ -49,6 +54,7 @@ contract MusicRegistry {
     );
 
     event PlayCountIncremented(uint256 indexed trackId, uint256 newPlayCount);
+    event TrackOwnershipTransferred(uint256 indexed trackId, address oldOwner, address newOwner);
 
     // -------------------------------------------------------------------------
     // Errors
@@ -56,6 +62,13 @@ contract MusicRegistry {
 
     error TrackNotFound(uint256 trackId);
     error EmptyField(string fieldName);
+    error Unauthorized();
+
+    // -------------------------------------------------------------------------
+    // Constructor
+    // -------------------------------------------------------------------------
+
+    constructor() Ownable(msg.sender) {}
 
     // -------------------------------------------------------------------------
     // Mutating functions
@@ -77,6 +90,7 @@ contract MusicRegistry {
     ) external returns (uint256 trackId) {
         if (bytes(title).length == 0)       revert EmptyField("title");
         if (bytes(artistName).length == 0)  revert EmptyField("artistName");
+        if (bytes(genre).length == 0)       revert EmptyField("genre");
         if (bytes(ipfsCID).length == 0)     revert EmptyField("ipfsCID");
         if (bytes(coverArtCID).length == 0) revert EmptyField("coverArtCID");
 
@@ -102,11 +116,25 @@ contract MusicRegistry {
             trackId,
             msg.sender,
             title,
+            artistName,
             genre,
             ipfsCID,
             coverArtCID,
             block.timestamp
         );
+    }
+
+    function setDisputeResolver(address resolver) external onlyOwner {
+        disputeResolver = resolver;
+    }
+
+    function transferTrackOwnership(uint256 trackId, address newOwner) external {
+        if (msg.sender != disputeResolver) revert Unauthorized();
+        if (!_tracks[trackId].exists) revert TrackNotFound(trackId);
+        address oldOwner = _tracks[trackId].artist;
+        _tracks[trackId].artist = newOwner;
+        _artistTracks[newOwner].push(trackId);
+        emit TrackOwnershipTransferred(trackId, oldOwner, newOwner);
     }
 
     /// @notice Increment the play count of a track by 1. Anyone can call this.

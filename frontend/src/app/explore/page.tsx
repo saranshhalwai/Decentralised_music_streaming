@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import TrackCard from "@/components/TrackCard";
 import { Search, Flame } from "lucide-react";
 import { useAudioPlayer } from "@/context/AudioPlayerContext";
-import { getWeb3Provider } from "@/lib/web3";
+import { getReadOnlyProvider } from "@/lib/web3";
 import { getMusicRegistryContract } from "@/lib/contracts";
 import { getIPFSUrl } from "@/lib/ipfs";
 
@@ -21,8 +21,7 @@ export default function ExplorePage() {
       try {
         setLoading(true);
         // We can use a public provider here if we don't want to force login just to browse
-        // But for simplicity in this dev environment, we use getWeb3Provider
-        const { provider } = await getWeb3Provider();
+        const provider = getReadOnlyProvider();
         const registry = getMusicRegistryContract(provider);
         
         const count = await registry.totalTracks();
@@ -49,8 +48,13 @@ export default function ExplorePage() {
           }
         }
         
-        // Sort by playCount or newest first
-        setTracks(fetchedTracks.reverse());
+        // Sort by playCount descending
+        const sortedTracks = fetchedTracks.sort((a, b) => {
+          const aPlays = BigInt(a.playCount.toString());
+          const bPlays = BigInt(b.playCount.toString());
+          return aPlays < bPlays ? 1 : aPlays > bPlays ? -1 : 0;
+        });
+        setTracks(sortedTracks);
       } catch (error) {
         console.error("Error fetching tracks from blockchain:", error);
       } finally {

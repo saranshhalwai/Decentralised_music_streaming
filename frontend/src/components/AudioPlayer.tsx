@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, useCallback, useRef } from "react";
-import { Play, Pause, SkipBack, SkipForward, Volume2, Maximize2, AlertCircle, Loader2, ExternalLink, ShieldCheck } from "lucide-react";
+import { Play, Pause, SkipBack, SkipForward, Volume2, Maximize2, AlertCircle, Loader2, ExternalLink, ShieldCheck, Download } from "lucide-react";
 import { useAudioPlayer } from "@/context/AudioPlayerContext";
 import { getWeb3Provider } from "@/lib/web3";
 import { getPaymentContract, PAYMENT_ADDRESS } from "@/lib/contracts";
@@ -23,10 +23,12 @@ const fallbackTrack = {
 };
 
 const GATEWAYS = [
+  `https://${process.env.NEXT_PUBLIC_IPFS_GATEWAY || "gateway.pinata.cloud"}/ipfs/`,
   "https://gateway.pinata.cloud/ipfs/",
   "https://cloudflare-ipfs.com/ipfs/",
   "https://ipfs.io/ipfs/",
-  "https://dweb.link/ipfs/"
+  "https://dweb.link/ipfs/",
+  "https://nftstorage.link/ipfs/"
 ];
 
 function formatTime(seconds: number) {
@@ -44,18 +46,20 @@ export default function AudioPlayer() {
   const [isLoading, setIsLoading] = useState(false);
   const [isAwaitingPayment, setIsAwaitingPayment] = useState(false);
   const [gatewayIndex, setGatewayIndex] = useState(0);
+  const [useBlobUrl, setUseBlobUrl] = useState<string | null>(null);
   
-  // Track tracking to avoid cascades
   const lastTrackId = useRef<string | null>(null);
 
   const track = useMemo(() => currentTrack ?? fallbackTrack, [currentTrack]);
 
-  // Construct the active URL based on current gateway index
+  // Strategy: Try streaming first. If it fails multiple times, fetch the whole blob.
   const activeSrc = useMemo(() => {
+    if (useBlobUrl) return useBlobUrl;
     if (!currentTrack || currentTrack.id === "sample") return fallbackTrack.src;
-    if (!currentTrack.ipfsCID) return "";
-    return `${GATEWAYS[gatewayIndex]}${currentTrack.ipfsCID}?filename=track.mp3`;
-  }, [currentTrack, gatewayIndex]);
+    const cid = currentTrack.ipfsCID;
+    if (!cid || cid.length < 10) return "";
+    return `${GATEWAYS[gatewayIndex]}${cid}`;
+  }, [currentTrack, gatewayIndex, useBlobUrl]);
 
   // Unified Playback Control
   useEffect(() => {
@@ -63,30 +67,43 @@ export default function AudioPlayer() {
     if (!audio) return;
 
     if (isPlaying && !isAwaitingPayment) {
-      if (audio.src && audio.src !== window.location.href) {
+      if (activeSrc.length > 0) {
         if (audio.readyState === 0) audio.load();
         
-        audio.play().catch(err => {
-          if (err.name !== "AbortError") {
-            console.error("Playback error:", err.name, activeSrc);
-            
-            if (gatewayIndex < GATEWAYS.length - 1) {
-              setError(`Gateway ${gatewayIndex + 1} slow, switching...`);
-              setTimeout(() => {
-                setGatewayIndex(prev => prev + 1);
-                audio.load();
-              }, 500);
-            } else {
-              setError("All IPFS gateways failed to serve this file.");
-              setIsPlaying(false);
+        const playPromise = audio.play();
+        if (playPromise !== undefined) {
+          playPromise.catch(err => {
+            if (err.name !== "AbortError" && err.name !== "NotSupportedError") {
+              console.warn("Playback error:", err.name, activeSrc);
             }
-          }
-        });
+          });
+        }
       }
     } else {
       audio.pause();
     }
-  }, [isPlaying, isAwaitingPayment, activeSrc, gatewayIndex, audioRef, setIsPlaying]);
+  }, [isPlaying, isAwaitingPayment, activeSrc, audioRef]);
+
+  const fetchFullTrackAsBlob = useCallback(async (cid: string) => {
+    try {
+      setIsLoading(true);
+      setError("Optimizing playback for your connection...");
+      
+      // Try the fastest gateway for a full download
+      const response = await fetch(`${GATEWAYS[gatewayIndex]}${cid}`);
+      if (!response.ok) throw new Error("Gateway failed");
+      
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      setUseBlobUrl(url);
+      setError(null);
+      setIsLoading(false);
+      return true;
+    } catch (e) {
+      console.error("Blob fetch failed", e);
+      return false;
+    }
+  }, [gatewayIndex]);
 
   const triggerPayment = useCallback(async (trackId: string) => {
     try {
@@ -100,10 +117,8 @@ export default function AudioPlayer() {
       const paymentContract = getPaymentContract(signer);
       const streamFee = ethers.parseEther("0.0001");
       
-      console.log("Requesting stream payment for track:", trackId);
-      const tx = await paymentContract.streamPayment(BigInt(trackId), { value: streamFee });
+      await paymentContract.streamPayment(BigInt(trackId), { value: streamFee });
       
-      console.log("Payment transaction sent:", tx.hash);
       setError("Payment confirmed! Loading track...");
       setIsAwaitingPayment(false);
       return true;
@@ -113,8 +128,7 @@ export default function AudioPlayer() {
       if (error.code === "ACTION_REJECTED") {
         setError("Payment required to stream this track.");
       } else {
-        console.error("Stream payment failed:", error);
-        setError("Payment failed. Please check your balance and try again.");
+        setError("Payment failed. Please check your balance.");
       }
       setIsPlaying(false);
       return false;
@@ -124,14 +138,15 @@ export default function AudioPlayer() {
   // Track Change logic
   useEffect(() => {
     if (currentTrack?.id && currentTrack.id !== lastTrackId.current) {
-      lastTrackId.current = currentTrack.id;
+      if (useBlobUrl) URL.revokeObjectURL(useBlobUrl);
       
-      // Stop current playback while we process
+      lastTrackId.current = currentTrack.id;
       setIsPlaying(false);
       
       setTimeout(async () => {
         setError(null);
         setGatewayIndex(0);
+        setUseBlobUrl(null);
         setCurrentTime(0);
         setDuration(0);
         
@@ -146,7 +161,7 @@ export default function AudioPlayer() {
         }
       }, 0);
     }
-  }, [currentTrack, setIsPlaying, triggerPayment]);
+  }, [currentTrack, setIsPlaying, triggerPayment, useBlobUrl]);
 
   // Volume control
   useEffect(() => {
@@ -163,22 +178,40 @@ export default function AudioPlayer() {
   const onLoadedMetadata = useCallback(() => {
     setIsLoading(false);
     if (!isAwaitingPayment) setError(null);
-    if (audioRef.current) setDuration(audioRef.current.duration);
+    if (audioRef.current) {
+      const d = audioRef.current.duration;
+      if (d && !isNaN(d) && d !== Infinity) setDuration(d);
+    }
   }, [audioRef, isAwaitingPayment]);
 
   const onEnded = useCallback(() => {
     setIsPlaying(false);
   }, [setIsPlaying]);
 
-  const onAudioError = useCallback(() => {
-    if (gatewayIndex < GATEWAYS.length - 1) {
+  const onAudioError = useCallback(async () => {
+    if (useBlobUrl) {
+      setError("Media Error: File is corrupted.");
+      setIsPlaying(false);
+      return;
+    }
+
+    if (gatewayIndex < 2) {
+       // Switch to next gateway
+       setGatewayIndex(prev => prev + 1);
+    } else if (gatewayIndex === 2 && currentTrack?.ipfsCID) {
+       // After 3 gateways fail, try fetching the whole thing as a blob
+       const success = await fetchFullTrackAsBlob(currentTrack.ipfsCID);
+       if (!success) {
+         setGatewayIndex(prev => prev + 1);
+       }
+    } else if (gatewayIndex < GATEWAYS.length - 1) {
        setGatewayIndex(prev => prev + 1);
     } else {
       setIsLoading(false);
       setIsPlaying(false);
-      setError("Media Error: File could not be loaded.");
+      setError("Media Error: High network congestion. Please try again later.");
     }
-  }, [gatewayIndex, setIsPlaying]);
+  }, [gatewayIndex, setIsPlaying, currentTrack, useBlobUrl, fetchFullTrackAsBlob]);
 
   const onCanPlay = useCallback(() => {
     setIsLoading(false);
@@ -221,14 +254,17 @@ export default function AudioPlayer() {
             <h4 className="text-sm font-bold text-white line-clamp-1">{track.title}</h4>
             <p className="text-xs text-gray-400 truncate">{track.artist_name}</p>
             {track.id !== "sample" && (
+              <div className="flex items-center gap-2 mt-0.5">
                <a 
                  href={activeSrc} 
                  target="_blank" 
                  rel="noopener noreferrer"
-                 className="text-[10px] text-[#ff2a5f] hover:underline flex items-center gap-1 mt-0.5"
+                 className="text-[10px] text-[#ff2a5f] hover:underline flex items-center gap-1"
                >
-                 <ExternalLink className="w-2 h-2" /> IPFS Link
+                 <ExternalLink className="w-2 h-2" /> IPFS Source
                </a>
+               {useBlobUrl && <span className="text-[10px] text-green-500 font-bold flex items-center gap-0.5"><Download className="w-2 h-2" /> Cached</span>}
+              </div>
             )}
           </div>
         </div>
@@ -251,7 +287,7 @@ export default function AudioPlayer() {
               className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
                 isAwaitingPayment 
                 ? "bg-gray-600 cursor-wait" 
-                : "bg-white text-black hover:scale-105 active:scale-95"
+                : "bg-white text-black hover:scale-105 active:scale-95 shadow-lg"
               }`}
             >
               {isAwaitingPayment ? (
@@ -291,7 +327,7 @@ export default function AudioPlayer() {
                 className="w-full h-2 bg-[#2a2a2a] appearance-none rounded-full accent-[#ff2a5f] cursor-pointer"
               />
               {error && (
-                <div className={`absolute -top-8 left-1/2 -translate-x-1/2 text-white text-[10px] px-2 py-1 rounded flex items-center gap-1 whitespace-nowrap shadow-lg ${
+                <div className={`absolute -top-8 left-1/2 -translate-x-1/2 text-white text-[10px] px-2 py-1 rounded flex items-center gap-1 whitespace-nowrap shadow-xl z-20 ${
                   isAwaitingPayment ? "bg-blue-600 animate-pulse" : "bg-[#ff2a5f]"
                 }`}>
                   {isAwaitingPayment ? <ShieldCheck className="w-3 h-3" /> : <AlertCircle className="w-3 h-3" />}

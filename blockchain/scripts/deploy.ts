@@ -13,9 +13,7 @@ async function main() {
     "ETH\n"
   );
 
-  // ------------------------------------------------------------------
   // 1. MusicRegistry
-  // ------------------------------------------------------------------
   console.log("Deploying MusicRegistry...");
   const MusicRegistry = await ethers.getContractFactory("MusicRegistry");
   const musicRegistry = await MusicRegistry.deploy();
@@ -23,9 +21,7 @@ async function main() {
   const registryAddress = await musicRegistry.getAddress();
   console.log("✅ MusicRegistry deployed to:", registryAddress);
 
-  // ------------------------------------------------------------------
   // 2. Payment
-  // ------------------------------------------------------------------
   console.log("\nDeploying Payment...");
   const Payment = await ethers.getContractFactory("Payment");
   const payment = await Payment.deploy(registryAddress);
@@ -33,9 +29,7 @@ async function main() {
   const paymentAddress = await payment.getAddress();
   console.log("✅ Payment deployed to:", paymentAddress);
 
-  // ------------------------------------------------------------------
   // 3. MusicNFT
-  // ------------------------------------------------------------------
   console.log("\nDeploying MusicNFT...");
   const MusicNFT = await ethers.getContractFactory("MusicNFT");
   const musicNFT = await MusicNFT.deploy(registryAddress);
@@ -43,16 +37,61 @@ async function main() {
   const nftAddress = await musicNFT.getAddress();
   console.log("✅ MusicNFT deployed to:", nftAddress);
 
-  // ------------------------------------------------------------------
+  // 4. BeatToken
+  console.log("\nDeploying BeatToken...");
+  const BeatToken = await ethers.getContractFactory("BeatToken");
+  const beatToken = await BeatToken.deploy();
+  await beatToken.waitForDeployment();
+  const beatTokenAddress = await beatToken.getAddress();
+  console.log("✅ BeatToken deployed to:", beatTokenAddress);
+
+  // 5. SharedOwnership
+  console.log("\nDeploying SharedOwnership...");
+  const SharedOwnership = await ethers.getContractFactory("SharedOwnership");
+  const sharedOwnership = await SharedOwnership.deploy(registryAddress, paymentAddress);
+  await sharedOwnership.waitForDeployment();
+  const sharedOwnershipAddress = await sharedOwnership.getAddress();
+  console.log("✅ SharedOwnership deployed to:", sharedOwnershipAddress);
+
+  // 6. DisputeResolution
+  console.log("\nDeploying DisputeResolution...");
+  const DisputeResolution = await ethers.getContractFactory("DisputeResolution");
+  const disputeResolution = await DisputeResolution.deploy(registryAddress, beatTokenAddress, sharedOwnershipAddress);
+  await disputeResolution.waitForDeployment();
+  const disputeResolutionAddress = await disputeResolution.getAddress();
+  console.log("✅ DisputeResolution deployed to:", disputeResolutionAddress);
+
+  // 7. MusicMarketplace
+  console.log("\nDeploying MusicMarketplace...");
+  const MusicMarketplace = await ethers.getContractFactory("MusicMarketplace");
+  const marketplace = await MusicMarketplace.deploy(nftAddress);
+  await marketplace.waitForDeployment();
+  const marketplaceAddress = await marketplace.getAddress();
+  console.log("✅ MusicMarketplace deployed to:", marketplaceAddress);
+
+  // Post-Deploy Wiring
+  console.log("\nExecuting Post-Deploy Wiring...");
+  await musicRegistry.setDisputeResolver(disputeResolutionAddress);
+  console.log("✅ registry.setDisputeResolver configured");
+
+  await payment.setSharedOwnership(sharedOwnershipAddress);
+  console.log("✅ payment.setSharedOwnership configured");
+
+  await sharedOwnership.setDisputeResolution(disputeResolutionAddress);
+  console.log("✅ sharedOwnership.setDisputeResolution configured");
+
   // Summary
-  // ------------------------------------------------------------------
   console.log("\n========================================");
   console.log("📋 Deployment Summary");
   console.log("========================================");
-  console.log(`Network:        ${network.name}`);
-  console.log(`MusicRegistry:  ${registryAddress}`);
-  console.log(`Payment:        ${paymentAddress}`);
-  console.log(`MusicNFT:       ${nftAddress}`);
+  console.log(`Network:           ${network.name}`);
+  console.log(`MusicRegistry:     ${registryAddress}`);
+  console.log(`Payment:           ${paymentAddress}`);
+  console.log(`MusicNFT:          ${nftAddress}`);
+  console.log(`BeatToken:         ${beatTokenAddress}`);
+  console.log(`SharedOwnership:   ${sharedOwnershipAddress}`);
+  console.log(`DisputeResolution: ${disputeResolutionAddress}`);
+  console.log(`MusicMarketplace:  ${marketplaceAddress}`);
   console.log("========================================");
   console.log("\n⚠️  Save these addresses! Update your frontend .env with them.");
 }
