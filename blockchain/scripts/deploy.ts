@@ -1,4 +1,5 @@
-import { network } from "hardhat";
+import "@nomicfoundation/hardhat-ethers";
+import {network} from "hardhat";
 
 async function main() {
   const { ethers } = await network.connect();
@@ -71,8 +72,15 @@ async function main() {
 
   // Post-Deploy Wiring
   console.log("\nExecuting Post-Deploy Wiring...");
+  
   await musicRegistry.setDisputeResolver(disputeResolutionAddress);
   console.log("✅ registry.setDisputeResolver configured");
+
+  await musicRegistry.setBeatToken(beatTokenAddress);
+  console.log("✅ registry.setBeatToken configured");
+
+  await beatToken.setMinter(registryAddress);
+  console.log("✅ beatToken.setMinter (Registry) configured");
 
   await payment.setSharedOwnership(sharedOwnershipAddress);
   console.log("✅ payment.setSharedOwnership configured");

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
-import { User, Wallet, Music, TrendingUp, Download, Loader2, AlertCircle, CheckCircle2, Award, Tag, Shield } from "lucide-react";
+import { User, Wallet, Music, TrendingUp, Download, Loader2, AlertCircle, CheckCircle2, Award, Tag, Shield, Coins } from "lucide-react";
 import { getWeb3Provider, formatAddress } from "@/lib/web3";
 import { getMusicRegistryContract, getPaymentContract, getMusicNFTContract, getMarketplaceContract, getGovernanceTokenContract, MARKETPLACE_ADDRESS } from "@/lib/contracts";
 import { ethers } from "ethers";
@@ -44,6 +44,7 @@ export default function Profile() {
   const [isLoading, setIsLoading] = useState(true);
   const [isWithdrawing, setIsWithdrawing] = useState(false);
   const [isDelegating, setIsDelegating] = useState(false);
+  const [isClaimingFaucet, setIsClaimingFaucet] = useState(false);
   const [txStatus, setTxStatus] = useState<{ type: 'success' | 'error', message: string } | null>(null);
   
   const { setCurrentTrack, setIsPlaying } = useAudioPlayer();
@@ -159,6 +160,31 @@ export default function Profile() {
       setTxStatus({ type: 'error', message: error.message || 'Withdrawal failed.' });
     } finally {
       setIsWithdrawing(false);
+    }
+  };
+
+  const handleClaimFaucet = async () => {
+    try {
+      setIsClaimingFaucet(true);
+      setTxStatus(null);
+      const { signer } = await getWeb3Provider();
+      const beatToken = getGovernanceTokenContract(signer);
+      
+      const tx = await beatToken.claimFaucet();
+      setTxStatus({ type: 'success', message: 'Claiming 1,000 BEAT tokens...' });
+      await tx.wait();
+      setTxStatus({ type: 'success', message: 'Tokens successfully claimed!' });
+      fetchProfileData();
+    } catch (err: unknown) {
+      const error = err as any;
+      console.error(err);
+      if (error.reason?.includes("Already claimed")) {
+        setTxStatus({ type: 'error', message: 'You have already claimed tokens from the faucet.' });
+      } else {
+        setTxStatus({ type: 'error', message: 'Faucet claim failed.' });
+      }
+    } finally {
+      setIsClaimingFaucet(false);
     }
   };
 
@@ -287,7 +313,18 @@ export default function Profile() {
             <div className="space-y-6">
               <div>
                 <p className="text-xs text-gray-500 uppercase font-bold tracking-wider mb-1">BEAT Balance</p>
-                <p className="text-2xl font-black text-white">{parseFloat(beatBalance).toFixed(2)} <span className="text-sm font-bold text-gray-500">BEAT</span></p>
+                <div className="flex items-center justify-between">
+                  <p className="text-2xl font-black text-white">{parseFloat(beatBalance).toFixed(2)} <span className="text-sm font-bold text-gray-500">BEAT</span></p>
+                  {parseFloat(beatBalance) === 0 && (
+                    <button 
+                      onClick={handleClaimFaucet}
+                      disabled={isClaimingFaucet}
+                      className="text-[10px] bg-white text-black px-2 py-1 rounded font-bold hover:bg-gray-200 flex items-center gap-1"
+                    >
+                      {isClaimingFaucet ? <Loader2 className="w-2 h-2 animate-spin" /> : <Coins className="w-2 h-2" />} Claim 1000
+                    </button>
+                  )}
+                </div>
               </div>
               <div>
                 <p className="text-xs text-gray-500 uppercase font-bold tracking-wider mb-1">Current Voting Weight</p>

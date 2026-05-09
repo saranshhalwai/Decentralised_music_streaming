@@ -2,6 +2,7 @@
 pragma solidity ^0.8.28;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "./BeatToken.sol";
 
 /// @title MusicRegistry
 /// @notice On-chain catalog of music tracks. Artists register tracks (stored on IPFS)
@@ -37,6 +38,9 @@ contract MusicRegistry is Ownable {
     mapping(address => uint256[]) private _artistTracks;
 
     address public disputeResolver;
+    BeatToken public beatToken;
+    
+    uint256 public constant UPLOAD_REWARD = 100 * 10 ** 18; // 100 BEAT
 
     // -------------------------------------------------------------------------
     // Events
@@ -73,6 +77,10 @@ contract MusicRegistry is Ownable {
     // -------------------------------------------------------------------------
     // Mutating functions
     // -------------------------------------------------------------------------
+
+    function setBeatToken(address _token) external onlyOwner {
+        beatToken = BeatToken(_token);
+    }
 
     /// @notice Register a new track on-chain.
     /// @param title        Human-readable title of the track.
@@ -111,6 +119,11 @@ contract MusicRegistry is Ownable {
         });
 
         _artistTracks[msg.sender].push(trackId);
+
+        // Reward the artist with BEAT tokens if configured
+        if (address(beatToken) != address(0)) {
+            try beatToken.mint(msg.sender, UPLOAD_REWARD) {} catch {}
+        }
 
         emit TrackUploaded(
             trackId,
