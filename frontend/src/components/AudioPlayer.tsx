@@ -26,7 +26,10 @@ function formatTime(seconds: number) {
 }
 
 export default function AudioPlayer() {
-  const { currentTrack, isPlaying, setIsPlaying, volume, setVolume, audioRef } = useAudioPlayer();
+  const { 
+    currentTrack, isPlaying, setIsPlaying, volume, setVolume, audioRef,
+    queue, playNext, playPrevious
+  } = useAudioPlayer();
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -69,10 +72,6 @@ export default function AudioPlayer() {
       audio.pause();
     }
   }, [isPlaying, isAwaitingPayment, hasPaid, currentTrack, activeSrc, audioRef]);
-
-
-
-
 
   const fetchFullTrackAsBlob = useCallback(async (cid: string) => {
     try {
@@ -175,8 +174,12 @@ export default function AudioPlayer() {
   }, [audioRef, isAwaitingPayment]);
 
   const onEnded = useCallback(() => {
-    setIsPlaying(false);
-  }, [setIsPlaying]);
+    if (queue.length > 0) {
+      playNext();
+    } else {
+      setIsPlaying(false);
+    }
+  }, [setIsPlaying, queue, playNext]);
 
   const onAudioError = useCallback(async () => {
     if (useBlobUrl) {
@@ -269,9 +272,8 @@ export default function AudioPlayer() {
           <div className="flex items-center gap-6 mb-3">
             <button
               className="text-gray-400 hover:text-white transition-colors"
-              onClick={() => {
-                if (audioRef.current) audioRef.current.currentTime = Math.max(audioRef.current.currentTime - 10, 0);
-              }}
+              onClick={playPrevious}
+              disabled={queue.length === 0}
             >
               <SkipBack className="w-5 h-5 fill-current" />
             </button>
@@ -302,9 +304,8 @@ export default function AudioPlayer() {
             
             <button
               className="text-gray-400 hover:text-white transition-colors"
-              onClick={() => {
-                if (audioRef.current) audioRef.current.currentTime = Math.min(audioRef.current.currentTime + 10, duration);
-              }}
+              onClick={playNext}
+              disabled={queue.length === 0}
             >
               <SkipForward className="w-5 h-5 fill-current" />
             </button>

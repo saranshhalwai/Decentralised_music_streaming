@@ -2,28 +2,40 @@
 
 import { useState, useEffect } from "react";
 import TrackCard from "@/components/TrackCard";
-import { Search, Flame } from "lucide-react";
+import PlaylistCard from "@/components/PlaylistCard";
+import { Search, Flame, LayoutGrid, ListMusic } from "lucide-react";
 import { useAudioPlayer } from "@/context/AudioPlayerContext";
 import { getReadOnlyProvider } from "@/lib/web3";
-import { getMusicRegistryContract } from "@/lib/contracts";
+import { getMusicRegistryContract, getPlaylistRegistryContract } from "@/lib/contracts";
 import { getIPFSUrl } from "@/lib/ipfs";
 
 import { Track } from "@/types/track";
 
+interface CommunityPlaylist {
+  id: string;
+  name: string;
+  description: string;
+  creator: string;
+  trackCount: number;
+  timestamp: number;
+}
+
 export default function ExplorePage() {
   const [tracks, setTracks] = useState<Track[]>([]);
+  const [communityPlaylists, setCommunityPlaylists] = useState<CommunityPlaylist[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [view, setView] = useState<"tracks" | "playlists">("tracks");
   const { setCurrentTrack, setIsPlaying } = useAudioPlayer();
 
   useEffect(() => {
-    const fetchTracks = async () => {
+    const fetchData = async () => {
       try {
         setLoading(true);
-        // We can use a public provider here if we don't want to force login just to browse
         const provider = getReadOnlyProvider();
-        const registry = getMusicRegistryContract(provider);
         
+        // Fetch Tracks
+        const registry = getMusicRegistryContract(provider);
         const count = await registry.totalTracks();
         const trackCount = Number(count);
         
@@ -41,29 +53,50 @@ export default function ExplorePage() {
               coverArtCID: trackData.coverArtCID,
               src: getIPFSUrl(trackData.ipfsCID),
               coverUrl: getIPFSUrl(trackData.coverArtCID),
-              playCount: trackData.playCount, // This is already bigint from ethers v6
+              playCount: trackData.playCount,
             });
           } catch (e) {
             console.error(`Error fetching track ${i}:`, e);
           }
         }
         
-        // Sort by playCount descending
         const sortedTracks = fetchedTracks.sort((a, b) => {
           const aPlays = BigInt(a.playCount.toString());
           const bPlays = BigInt(b.playCount.toString());
           return aPlays < bPlays ? 1 : aPlays > bPlays ? -1 : 0;
         });
         setTracks(sortedTracks);
+
+        // Fetch Playlists
+        const playlistRegistry = getPlaylistRegistryContract(provider);
+        const pCount = await playlistRegistry.totalPlaylists();
+        if (Number(pCount) > 0) {
+          const recentPlaylists = await playlistRegistry.getRecentPlaylists(BigInt(8));
+          setCommunityPlaylists(recentPlaylists.map((p: { 
+            id: bigint; 
+            name: string; 
+            description: string; 
+            creator: string; 
+            trackIds: bigint[]; 
+            timestamp: bigint; 
+          }) => ({
+            id: p.id.toString(),
+            name: p.name,
+            description: p.description,
+            creator: p.creator,
+            trackCount: p.trackIds.length,
+            timestamp: Number(p.timestamp)
+          })));
+        }
       } catch (error) {
-        console.error("Error fetching tracks from blockchain:", error);
+        console.error("Error fetching data from blockchain:", error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchTracks();
-  }, [setCurrentTrack, setIsPlaying]);
+    fetchData();
+  }, []); // Removed setCurrentTrack, setIsPlaying as they are stable from context
 
   const handlePlay = (track: Track) => {
     setCurrentTrack(track);
@@ -75,48 +108,98 @@ export default function ExplorePage() {
     t.artist_name.toLowerCase().includes(search.toLowerCase())
   );
 
+  const filteredPlaylists = communityPlaylists.filter(p => 
+    p.name.toLowerCase().includes(search.toLowerCase())
+  );
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-12 gap-6">
         <div>
           <h1 className="text-4xl font-black flex items-center gap-3 mb-2">
-            <Flame className="text-[#ff2a5f] w-8 h-8" />
-            Trending Tracks
+            {view === "tracks" ? (
+              <>
+                <Flame className="text-[#ff2a5f] w-8 h-8" />
+                Trending Tracks
+              </>
+            ) : (
+              <>
+                <ListMusic className="text-[#3b82f6] w-8 h-8" />
+                Community Playlists
+              </>
+            )}
           </h1>
-          <p className="text-gray-400">Discover the best decentralized music.</p>
+          <p className="text-gray-400">
+            {view === "tracks" 
+              ? "Discover the best decentralized music." 
+              : "Explore collections curated by the community on-chain."}
+          </p>
         </div>
         
-        <div className="relative w-full md:w-96">
-          <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-            <Search className="h-5 w-5 text-gray-500" />
+        <div className="flex flex-col sm:flex-row items-center gap-4">
+          <div className="flex bg-[#141414] border border-[#2a2a2a] p-1 rounded-xl shadow-lg">
+            <button 
+              onClick={() => setView("tracks")}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${
+                view === "tracks" ? "bg-[#ff2a5f] text-white shadow-lg" : "text-gray-500 hover:text-white"
+              }`}
+            >
+              <LayoutGrid className="w-4 h-4" />
+              Tracks
+            </button>
+            <button 
+              onClick={() => setView("playlists")}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${
+                view === "playlists" ? "bg-[#3b82f6] text-white shadow-lg" : "text-gray-500 hover:text-white"
+              }`}
+            >
+              <ListMusic className="w-4 h-4" />
+              Playlists
+            </button>
           </div>
-          <input
-            type="text"
-            className="block w-full pl-11 pr-4 py-3 bg-[#141414] border border-[#2a2a2a] rounded-full text-sm placeholder-gray-500 focus:border-[#ff2a5f] focus:ring-1 focus:ring-[#ff2a5f] transition-all outline-none"
-            placeholder="Search tracks or artists..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
+
+          <div className="relative w-full md:w-80">
+            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+              <Search className="h-4 w-4 text-gray-500" />
+            </div>
+            <input
+              type="text"
+              className="block w-full pl-11 pr-4 py-2.5 bg-[#141414] border border-[#2a2a2a] rounded-full text-sm placeholder-gray-500 focus:border-[#ff2a5f] focus:ring-1 focus:ring-[#ff2a5f] transition-all outline-none"
+              placeholder={`Search ${view}...`}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
         </div>
       </div>
 
       {loading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
           {[1, 2, 3, 4].map(i => (
-            <div key={i} className="animate-pulse rounded-2xl bg-[#141414] h-[350px] border border-[#2a2a2a]"></div>
+            <div key={i} className="animate-pulse rounded-2xl bg-[#141414] h-80 border border-[#2a2a2a]"></div>
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-          {filteredTracks.map(track => (
-            <TrackCard key={track.id} track={track} onPlay={handlePlay} />
-          ))}
-        </div>
+        <>
+          {view === "tracks" ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+              {filteredTracks.map(track => (
+                <TrackCard key={track.id} track={track} onPlay={handlePlay} />
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+              {filteredPlaylists.map(playlist => (
+                <PlaylistCard key={playlist.id} playlist={playlist} />
+              ))}
+            </div>
+          )}
+        </>
       )}
       
-      {!loading && filteredTracks.length === 0 && (
+      {!loading && (view === "tracks" ? filteredTracks.length === 0 : filteredPlaylists.length === 0) && (
         <div className="text-center py-20 text-gray-500">
-          <p className="text-xl">No tracks found matching &quot;{search}&quot;</p>
+          <p className="text-xl">No {view} found matching &quot;{search}&quot;</p>
         </div>
       )}
     </div>

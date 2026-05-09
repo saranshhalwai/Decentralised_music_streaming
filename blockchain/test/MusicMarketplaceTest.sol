@@ -43,7 +43,7 @@ contract MusicMarketplaceTest {
 
         SellerProxy seller = new SellerProxy();
         // seller uploads a track and mints NFT from its own account
-        uint256 trackId = seller.uploadMintAndApprove(address(reg), address(nft), address(market));
+        seller.uploadMintAndApprove(address(reg), address(nft), address(market));
 
         // list tokenId 0 for 1 ether
         seller.list(address(market), 0, 1 ether);

@@ -26,7 +26,7 @@ export default function ConcertList({ onSelect }: { onSelect?: (id: number) => v
       try {
         setLoading(true);
         const provider = getReadOnlyProvider();
-        const contract = getConcertManagerContract(provider as any);
+        const contract = getConcertManagerContract(provider);
         const total = await contract.totalConcerts();
         const n = Number(total?.toString?.() ?? total);
 

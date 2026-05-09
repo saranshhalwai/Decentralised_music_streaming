@@ -5,8 +5,20 @@ import { getReadOnlyProvider, getWeb3Provider } from "@/lib/web3";
 import { getConcertManagerContract } from "@/lib/contracts";
 import { ethers } from "ethers";
 
+interface Concert {
+  id: number;
+  title: string;
+  date: Date;
+  location: string;
+  priceWei: string;
+  price: string;
+  totalTickets: number;
+  ticketsSold: number;
+  baseURI: string;
+}
+
 export default function ConcertDetail({ concertId }: { concertId: number }) {
-  const [concert, setConcert] = useState<any>(null);
+  const [concert, setConcert] = useState<Concert | null>(null);
   const [loading, setLoading] = useState(true);
   const [buying, setBuying] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -16,7 +28,7 @@ export default function ConcertDetail({ concertId }: { concertId: number }) {
       try {
         setLoading(true);
         const provider = getReadOnlyProvider();
-        const contract = getConcertManagerContract(provider as any);
+        const contract = getConcertManagerContract(provider);
         const c = await contract.getConcert(concertId);
         setConcert({
           id: Number(c.id.toString()),
@@ -44,8 +56,8 @@ export default function ConcertDetail({ concertId }: { concertId: number }) {
     try {
       setBuying(true);
       setMessage(null);
-      const { provider, signer } = await getWeb3Provider();
-      const contract = getConcertManagerContract(signer as any);
+      const { signer } = await getWeb3Provider();
+      const contract = getConcertManagerContract(signer);
       const tx = await contract.buyTicket(concert.id, { value: concert.priceWei });
       setMessage("Waiting for transaction...");
       await tx.wait();
@@ -53,7 +65,7 @@ export default function ConcertDetail({ concertId }: { concertId: number }) {
 
       // reload concert info
       const ro = getReadOnlyProvider();
-      const roContract = getConcertManagerContract(ro as any);
+      const roContract = getConcertManagerContract(ro);
       const c2 = await roContract.getConcert(concertId);
       setConcert({
         id: Number(c2.id.toString()),
@@ -66,9 +78,10 @@ export default function ConcertDetail({ concertId }: { concertId: number }) {
         ticketsSold: Number(c2.ticketsSold.toString()),
         baseURI: c2.baseURI,
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      setMessage(err?.message || String(err));
+      const error = err as { message?: string };
+      setMessage(error?.message || String(err));
     } finally {
       setBuying(false);
     }

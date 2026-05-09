@@ -35,7 +35,7 @@ export default function MarketplacePage() {
       const loadedListings: Listing[] = [];
 
       // Deduplicate token IDs — some deployments may have duplicates in the active list.
-      const uniqueIds = Array.from(new Set(activeTokenIds.map((id: any) => id.toString())));
+      const uniqueIds: string[] = Array.from(new Set(activeTokenIds.map((id: bigint) => id.toString())));
 
       for (const tokenIdStr of uniqueIds) {
         const tokenId = BigInt(tokenIdStr);

@@ -176,8 +176,8 @@ export default function Profile() {
       setTxStatus({ type: 'success', message: 'Tokens successfully claimed!' });
       fetchProfileData();
     } catch (err: unknown) {
-      const error = err as any;
       console.error(err);
+      const error = err as { reason?: string };
       if (error.reason?.includes("Already claimed")) {
         setTxStatus({ type: 'error', message: 'You have already claimed tokens from the faucet.' });
       } else {

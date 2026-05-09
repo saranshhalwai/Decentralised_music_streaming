@@ -1,11 +1,12 @@
 "use client";
 
-import { Play, Disc, Heart, DollarSign, ExternalLink } from "lucide-react";
+import { Play, Disc, Heart, DollarSign, ExternalLink, ListPlus } from "lucide-react";
 import { Track } from "@/types/track";
 import Link from "next/link";
 import { getIPFSUrl } from "@/lib/ipfs";
 import { useState, useEffect } from "react";
 import Image from "next/image";
+import AddToPlaylistModal from "./AddToPlaylistModal";
 
 const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=500&auto=format&fit=crop";
 
@@ -13,8 +14,14 @@ export default function TrackCard({ track, onPlay }: { track: Track; onPlay: (tr
   const [imgSrc, setImgSrc] = useState<string>(() => (track.coverUrl && track.coverUrl.length > 5) ? track.coverUrl : FALLBACK_IMAGE);
   const [retryCount, setRetryCount] = useState(0);
   const [prevCoverUrl, setPrevCoverUrl] = useState(track.coverUrl);
-  const [liked, setLiked] = useState<boolean>(false);
+  const [liked, setLiked] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      return !!localStorage.getItem(`liked:${track.id}`);
+    }
+    return false;
+  });
   const [plays, setPlays] = useState<number>(Number(track.playCount?.toString?.() ?? track.playCount ?? 0));
+  const [showPlaylistModal, setShowPlaylistModal] = useState(false);
 
   if (track.coverUrl !== prevCoverUrl) {
     setImgSrc((track.coverUrl && track.coverUrl.length > 5) ? track.coverUrl : FALLBACK_IMAGE);
@@ -23,12 +30,13 @@ export default function TrackCard({ track, onPlay }: { track: Track; onPlay: (tr
   }
 
   useEffect(() => {
-    try {
-      const likedLocal = typeof window !== 'undefined' && !!localStorage.getItem(`liked:${track.id}`);
-      setLiked(Boolean(likedLocal));
-    } catch (e) {
-      setLiked(false);
-    }
+    // Synchronize liked state if it changes in another component/tab
+    const syncLiked = () => {
+      const likedLocal = !!localStorage.getItem(`liked:${track.id}`);
+      setLiked(likedLocal);
+    };
+    window.addEventListener('storage', syncLiked);
+    return () => window.removeEventListener('storage', syncLiked);
   }, [track.id]);
 
   const handlePlayClick = async (e: React.MouseEvent) => {
@@ -113,6 +121,17 @@ export default function TrackCard({ track, onPlay }: { track: Track; onPlay: (tr
             <p className="text-gray-400 text-sm line-clamp-1">{track.artist_name}</p>
           </Link>
           <div className="flex gap-2">
+            <button
+              title="Add to Playlist"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setShowPlaylistModal(true);
+              }}
+              className="text-gray-500 hover:text-[#ff2a5f] transition-colors"
+            >
+              <ListPlus className="w-5 h-5" />
+            </button>
             <button 
               className="text-gray-500 hover:text-[#ff2a5f] transition-colors"
               onClick={async (e) => {
@@ -143,7 +162,7 @@ export default function TrackCard({ track, onPlay }: { track: Track; onPlay: (tr
                 try {
                   if (newVal) localStorage.setItem(`liked:${track.id}`, '1');
                   else localStorage.removeItem(`liked:${track.id}`);
-                } catch (err) {}
+                } catch { }
               }}
               className={`transition-colors ${liked ? 'text-[#ff2a5f]' : 'text-gray-500 hover:text-[#ff2a5f]'}`}
             >
@@ -163,6 +182,13 @@ export default function TrackCard({ track, onPlay }: { track: Track; onPlay: (tr
           </span>
         </div>
       </div>
+      
+      {showPlaylistModal && (
+        <AddToPlaylistModal 
+          track={track} 
+          onClose={() => setShowPlaylistModal(false)} 
+        />
+      )}
     </div>
   );
 }

@@ -86,6 +86,14 @@ async function main() {
   const concertManagerAddress = await concertManager.getAddress();
   console.log("✅ ConcertManager deployed to:", concertManagerAddress);
 
+  // 10. PlaylistRegistry
+  console.log("\nDeploying PlaylistRegistry...");
+  const PlaylistRegistry = await ethers.getContractFactory("PlaylistRegistry");
+  const playlistRegistry = await PlaylistRegistry.deploy();
+  await playlistRegistry.waitForDeployment();
+  const playlistRegistryAddress = await playlistRegistry.getAddress();
+  console.log("✅ PlaylistRegistry deployed to:", playlistRegistryAddress);
+
   // Post-Deploy Wiring
   console.log("\nExecuting Post-Deploy Wiring...");
   
@@ -121,6 +129,7 @@ async function main() {
   console.log(`MusicMarketplace:  ${marketplaceAddress}`);
   console.log(`TicketNFT:         ${ticketNFTAddress}`);
   console.log(`ConcertManager:    ${concertManagerAddress}`);
+  console.log(`PlaylistRegistry:  ${playlistRegistryAddress}`);
   console.log("========================================");
   console.log("\n⚠️  Save these addresses! Update your frontend .env with them.");
 }

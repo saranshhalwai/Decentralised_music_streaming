@@ -64,7 +64,7 @@ export default function TrackDetails() {
       try {
         const likedLocal = typeof window !== 'undefined' && !!localStorage.getItem(`liked:${formattedTrack.id}`);
         setLiked(Boolean(likedLocal));
-      } catch (e) {
+      } catch {
         setLiked(false);
       }
       setPlays(Number(formattedTrack.playCount?.toString?.() ?? formattedTrack.playCount ?? 0));
@@ -273,7 +273,18 @@ export default function TrackDetails() {
             <button onClick={handlePlay} className="px-8 py-4 rounded-full bg-gradient-to-r from-[#ff2a5f] to-[#ff7e40] text-white font-bold text-lg flex items-center gap-3 hover:scale-105 transition-transform shadow-lg shadow-[#ff2a5f]/20">
               <Play className="w-6 h-6 fill-current" />Play Now
             </button>
-            <button onClick={(e) => { e.preventDefault(); const newVal = !liked; setLiked(newVal); try { if (newVal) localStorage.setItem(`liked:${track?.id}`, '1'); else localStorage.removeItem(`liked:${track?.id}`); } catch (err) {} }} className={`px-6 py-4 rounded-full flex items-center gap-3 ${liked ? 'bg-[#ff2a5f] text-white' : 'bg-[#141414] border border-[#2a2a2a] text-white'}`}>
+            <button 
+              onClick={(e) => { 
+                e.preventDefault(); 
+                const newVal = !liked; 
+                setLiked(newVal); 
+                try { 
+                  if (newVal) localStorage.setItem(`liked:${track?.id}`, '1'); 
+                  else localStorage.removeItem(`liked:${track?.id}`); 
+                } catch { } 
+              }} 
+              className={`px-6 py-4 rounded-full flex items-center gap-3 ${liked ? 'bg-[#ff2a5f] text-white' : 'bg-[#141414] border border-[#2a2a2a] text-white'}`}
+            >
               <Heart className="w-5 h-5" fill={liked ? 'currentColor' : undefined} />
               {liked ? 'Liked' : 'Like'}
             </button>

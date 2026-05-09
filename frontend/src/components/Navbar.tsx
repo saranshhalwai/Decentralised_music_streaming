@@ -65,6 +65,7 @@ export default function Navbar() {
             <div className="hidden md:flex items-center space-x-1">
               <NavLink href="/" icon={<Home className="w-4 h-4" />} text="Home" />
               <NavLink href="/explore" icon={<Compass className="w-4 h-4" />} text="Explore" />
+              <NavLink href="/playlists" icon={<Music className="w-4 h-4" />} text="Playlists" />
               <NavLink href="/dashboard" icon={<LayoutDashboard className="w-4 h-4" />} text="Artist" />
               <NavLink href="/marketplace" icon={<ShoppingCart className="w-4 h-4" />} text="Marketplace" />
               <NavLink href="/dispute" icon={<Scale className="w-4 h-4" />} text="Disputes" />

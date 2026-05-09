@@ -20,8 +20,8 @@ export const incrementPlayCountOnChain = async (trackId: string | number): Promi
     // Ensure numeric id for BigInt conversion
     let idToUse: bigint;
     try {
-      idToUse = BigInt(trackId as any);
-    } catch (e) {
+      idToUse = BigInt(trackId);
+    } catch {
       console.warn("incrementPlayCountOnChain: trackId not numeric, skipping on-chain increment", trackId);
       return null;
     }
@@ -32,11 +32,11 @@ export const incrementPlayCountOnChain = async (trackId: string | number): Promi
     // fetch updated playCount
     try {
       const updated = await registry.getTrack(idToUse);
-      const raw = (updated as any).playCount ?? 0;
-      const playCountNum = raw && typeof raw.toString === 'function' ? Number(raw.toString()) : Number(raw || 0);
+      const raw = updated.playCount ?? 0n;
+      const playCountNum = Number(raw);
       return playCountNum;
-    } catch (e) {
-      console.warn("Could not fetch updated playCount", e);
+    } catch (error) {
+      console.warn("Could not fetch updated playCount", error);
       return null;
     }
   } catch (err) {
