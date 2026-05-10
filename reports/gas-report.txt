@@ -1,0 +1,507 @@
+◇ injected env (0) from .env // tip: ⌘ override existing { override: true }
+No contracts to compile
+
+Running Solidity tests
+
+  test/CounterTest.sol:CounterTest
+    ✔ testSumOfIncrementsMatches()
+    ✔ testIncrementEvent()
+
+  test/SharedOwnershipTest.sol:SharedOwnershipTest
+    ✔ testSetSharesAndDistribute()
+
+  test/ConcertManagerTest.sol:ConcertManagerTest
+    ✔ testCreateAndBuyTicket()
+
+  test/TicketNFTTest.sol:TicketNFTTest
+    ✔ testSetMinterAndMint()
+
+  test/AuctionTest.sol:AuctionTest
+    ✔ testAuctionBids()
+
+  test/DisputeResolutionTest.sol:DisputeResolutionTest
+    ✔ testOpenDisputeAndSubmitEvidence()
+
+  test/PaymentTest.sol:PaymentTest
+    ✔ testWithdrawEarningsResets()
+    ✔ testTipArtistAndEarnings()
+
+  test/MusicRegistryTest.sol:MusicRegistryTest
+    ✔ testUploadAndGetTrack()
+    ✔ testIncrementPlayCount()
+    ✔ testEmptyFieldReverts()
+
+  test/MusicNFTTest.sol:MusicNFTTest
+    ✔ testTotalMinted()
+    ✔ testMintCollectible()
+
+  test/BeatTokenTest.sol:BeatTokenTest
+    ✔ testOwnerCanMint()
+    ✔ testNonOwnerCannotMint()
+    ✔ testDeployment()
+
+  test/MusicMarketplaceTest.sol:MusicMarketplaceTest
+    ✔ testListAndBuy()
+
+Running Mocha tests
+
+
+  Auction
+    ✔ should run a simple auction lifecycle (119ms)
+
+  BeatToken
+    Deployment
+      ✔ Should assign the total supply of tokens to the owner
+      ✔ Should set the correct token name and symbol
+    Minting
+      ✔ Should allow the owner to mint more tokens
+      ✔ Should not allow non-owners to mint tokens
+    Voting
+      ✔ Should allow users to delegate and have voting power
+
+  ConcertManager
+    ✔ should create a concert and allow buying a ticket (49ms)
+    ✔ should let artist update ticket price and withdraw funds (59ms)
+
+  Counter
+    ✔ Should emit the Increment event when calling the inc() function
+    ✔ The sum of the Increment events should match the current value (64ms)
+
+  DisputeResolution
+    Opening Disputes
+      ✔ Should allow a user to open a dispute with sufficient stake
+      ✔ Should fail if stake is insufficient
+      ✔ Should fail if artist disputes their own track
+    Submitting Evidence
+      ✔ Should allow respondent to submit evidence
+      ✔ Should fail if not respondent
+    Voting and Resolution
+      ✔ Should allow voters to cast votes
+      ✔ Should resolve in favor of claimant when they have more votes
+      ✔ Should resolve in favor of respondent on tie or when they have more votes
+      ✔ Should fail to resolve before deadline
+
+  MusicMarketplace
+    Deployment
+      ✔ Should set the correct musicNFT address and fee recipient
+    Listing NFTs
+      ✔ Should allow the owner to list an NFT
+      ✔ Should fail to list if not approved
+      ✔ Should fail to list if not owner
+    Buying NFTs
+      ✔ Should allow a user to buy an active listing
+      ✔ Should fail to buy if price mismatch
+      ✔ Should fail to buy if not active
+    Managing Listings
+      ✔ Should allow seller to cancel listing
+      ✔ Should allow seller to update price
+      ✔ Should fail to cancel if not seller
+
+  MusicNFT
+    Deployment
+      ✔ should deploy with correct name and symbol (43ms)
+      ✔ should set the deployer as owner (42ms)
+      ✔ should start with 0 tokens minted (38ms)
+    mintCollectible
+      ✔ should mint a token and emit CollectibleMinted (55ms)
+      ✔ should assign ownership to the 'to' address (55ms)
+      ✔ should set the correct tokenURI (57ms)
+      ✔ should record collectible metadata correctly (54ms)
+      ✔ should assign sequential token IDs (68ms)
+      ✔ should revert with EmptyMetadataURI if metadataURI is empty (51ms)
+      ✔ should allow minting to oneself (51ms)
+    getCollectible
+      ✔ should revert with TokenNotFound for a non-existent tokenId (39ms)
+    totalMinted
+      ✔ should increase after each mint (68ms)
+    ERC-721 transfers
+      ✔ should allow NFT transfer between accounts (53ms)
+
+  MusicRegistry
+    uploadTrack
+      ✔ should upload a track and emit TrackUploaded event
+      ✔ should assign sequential IDs starting from 0
+      ✔ should revert with EmptyField if title is empty
+      ✔ should revert with EmptyField if ipfsCID is empty
+      ✔ should revert with EmptyField if coverArtCID is empty
+      ✔ should store the correct artist address
+      ✔ should store all track fields correctly
+    getTrack
+      ✔ should revert with TrackNotFound for non-existent trackId
+    getTracksByArtist
+      ✔ should return an empty array for an artist with no tracks
+      ✔ should return all tracks for a specific artist (44ms)
+    incrementPlayCount
+      ✔ should increment play count and emit PlayCountIncremented event
+      ✔ should allow multiple play count increments (40ms)
+      ✔ should revert with TrackNotFound for non-existent trackId
+    totalTracks
+      ✔ should return 0 before any uploads
+      ✔ should return the correct count after uploads
+
+  Payment
+    tipArtist
+      ✔ should credit artist earnings and emit TipReceived (45ms)
+      ✔ should accumulate tips from multiple fans (43ms)
+      ✔ should revert with ZeroValue when msg.value is 0
+      ✔ should revert with ZeroAddress when artist is zero address
+    streamPayment
+      ✔ should credit artist and emit StreamPayment (48ms)
+      ✔ should revert with ZeroValue when msg.value is 0 (40ms)
+      ✔ should revert with TrackNotFound for non-existent trackId
+    withdrawEarnings
+      ✔ should transfer accumulated earnings to artist and emit event (44ms)
+      ✔ should zero out earnings after withdrawal (48ms)
+      ✔ should emit EarningsWithdrawn event (44ms)
+      ✔ should revert with NoEarnings if balance is zero
+      ✔ should not allow double withdrawal (45ms)
+    earningsOf
+      ✔ should return 0 for an artist with no tips
+
+  SharedOwnership
+    Setting Shares
+      ✔ Should allow the track owner to set shares
+      ✔ Should fail if not track owner
+      ✔ Should fail if basis points do not sum to 10000
+      ✔ Should fail if lengths mismatch
+    Distributing Revenue
+      ✔ Should correctly distribute revenue based on shares
+    Clearing Shares
+      ✔ Should allow the dispute resolver to clear shares
+      ✔ Should fail to clear if not dispute resolver
+
+  TicketNFT
+    ✔ should allow setting a minter and mint tickets
+
+
+  78 passing (5s)
+
+
+96 passing (18 solidity, 78 mocha)
+
+╔═════════════════════════════════════════════════════════════════════════════════╗
+║                              Gas Usage Statistics                               ║
+╚═════════════════════════════════════════════════════════════════════════════════╝
+╔═════════════════════════════════════════════════════════════════════════════════╗
+║ contracts/Auction.sol:Auction                                                   ║
+╟──────────────────────────┬─────────┬─────────┬─────────┬─────────┬──────────────╢
+║ Function name            │ Min     │ Average │ Median  │ Max     │ #calls       ║
+╟──────────────────────────┼─────────┼─────────┼─────────┼─────────┼──────────────╢
+║ auctions                 │ 18534   │ 18534   │ 18534   │ 18534   │ 2            ║
+║ bid                      │ 60873   │ 66650   │ 66650   │ 72427   │ 2            ║
+║ createAuction            │ 206040  │ 206040  │ 206040  │ 206040  │ 1            ║
+║ finalizeAuction          │ 105755  │ 105755  │ 105755  │ 105755  │ 1            ║
+║ pendingReturns           │ 2803    │ 2803    │ 2803    │ 2803    │ 1            ║
+╟──────────────────────────┼─────────┼─────────┼─────────┼─────────┼──────────────╢
+║ Deployment               │ Min     │ Average │ Median  │ Max     │ #deployments ║
+╟──────────────────────────┼─────────┼─────────┼─────────┼─────────┼──────────────╢
+║                          │ 1280436 │ 1280436 │ 1280436 │ 1280436 │ 2            ║
+╟──────────────────────────┼─────────┼─────────┴─────────┴─────────┴──────────────╢
+║ Bytecode size            │ 5696    │                                            ║
+╚══════════════════════════╧═════════╧════════════════════════════════════════════╝
+╔═════════════════════════════════════════════════════════════════════════════════╗
+║ contracts/BeatToken.sol:BeatToken                                               ║
+╟──────────────────────────┬─────────┬─────────┬─────────┬─────────┬──────────────╢
+║ Function name            │ Min     │ Average │ Median  │ Max     │ #calls       ║
+╟──────────────────────────┼─────────┼─────────┼─────────┼─────────┼──────────────╢
+║ balanceOf                │ 2939    │ 13655   │ 13655   │ 24371   │ 4            ║
+║ decimals                 │ 406     │ 14449   │ 21470   │ 21470   │ 6            ║
+║ delegate                 │ 96775   │ 96775   │ 96775   │ 96775   │ 19           ║
+║ getVotes                 │ 24401   │ 25647   │ 25647   │ 26892   │ 2            ║
+║ mint                     │ 68376   │ 79766   │ 79766   │ 91156   │ 2            ║
+║ name                     │ 3376    │ 13908   │ 13908   │ 24440   │ 2            ║
+║ symbol                   │ 3440    │ 13972   │ 13972   │ 24504   │ 2            ║
+║ totalSupply              │ 2545    │ 13077   │ 13077   │ 23609   │ 2            ║
+║ transfer                 │ 57039   │ 57039   │ 57039   │ 57039   │ 19           ║
+╟──────────────────────────┼─────────┼─────────┼─────────┼─────────┼──────────────╢
+║ Deployment               │ Min     │ Average │ Median  │ Max     │ #deployments ║
+╟──────────────────────────┼─────────┼─────────┼─────────┼─────────┼──────────────╢
+║                          │ 3630085 │ 3630085 │ 3630085 │ 3630085 │ 18           ║
+╟──────────────────────────┼─────────┼─────────┴─────────┴─────────┴──────────────╢
+║ Bytecode size            │ 15344   │                                            ║
+╚══════════════════════════╧═════════╧════════════════════════════════════════════╝
+╔═════════════════════════════════════════════════════════════════════════════════╗
+║ contracts/ConcertManager.sol:ConcertManager                                     ║
+╟──────────────────────────┬─────────┬─────────┬─────────┬─────────┬──────────────╢
+║ Function name            │ Min     │ Average │ Median  │ Max     │ #calls       ║
+╟──────────────────────────┼─────────┼─────────┼─────────┼─────────┼──────────────╢
+║ buyTicket                │ 286395  │ 297101  │ 297101  │ 307807  │ 2            ║
+║ createConcert            │ 219599  │ 229876  │ 229876  │ 240153  │ 2            ║
+║ pendingWithdrawals       │ 24322   │ 24322   │ 24322   │ 24322   │ 2            ║
+║ setTicketPrice           │ 33413   │ 33413   │ 33413   │ 33413   │ 1            ║
+║ withdraw                 │ 30326   │ 30326   │ 30326   │ 30326   │ 1            ║
+╟──────────────────────────┼─────────┼─────────┼─────────┼─────────┼──────────────╢
+║ Deployment               │ Min     │ Average │ Median  │ Max     │ #deployments ║
+╟──────────────────────────┼─────────┼─────────┼─────────┼─────────┼──────────────╢
+║                          │ 2716039 │ 2716039 │ 2716039 │ 2716039 │ 3            ║
+╟──────────────────────────┼─────────┼─────────┴─────────┴─────────┴──────────────╢
+║ Bytecode size            │ 11991   │                                            ║
+╚══════════════════════════╧═════════╧════════════════════════════════════════════╝
+╔═════════════════════════════════════════════════════════════════════════════════╗
+║ contracts/Counter.sol:Counter                                                   ║
+╟──────────────────────────┬─────────┬─────────┬─────────┬─────────┬──────────────╢
+║ Function name            │ Min     │ Average │ Median  │ Max     │ #calls       ║
+╟──────────────────────────┼─────────┼─────────┼─────────┼─────────┼──────────────╢
+║ inc                      │ 44774   │ 44774   │ 44774   │ 44774   │ 2            ║
+║ incBy                    │ 28047   │ 29757   │ 28047   │ 45147   │ 20           ║
+║ x                        │ 2402    │ 9423    │ 2402    │ 23466   │ 3            ║
+╟──────────────────────────┼─────────┼─────────┼─────────┼─────────┼──────────────╢
+║ Deployment               │ Min     │ Average │ Median  │ Max     │ #deployments ║
+╟──────────────────────────┼─────────┼─────────┼─────────┼─────────┼──────────────╢
+║                          │ 263088  │ 263088  │ 263088  │ 263088  │ 4            ║
+╟──────────────────────────┼─────────┼─────────┴─────────┴─────────┴──────────────╢
+║ Bytecode size            │ 975     │                                            ║
+╚══════════════════════════╧═════════╧════════════════════════════════════════════╝
+╔═════════════════════════════════════════════════════════════════════════════════╗
+║ contracts/DisputeResolution.sol:DisputeResolution                               ║
+╟──────────────────────────┬─────────┬─────────┬─────────┬─────────┬──────────────╢
+║ Function name            │ Min     │ Average │ Median  │ Max     │ #calls       ║
+╟──────────────────────────┼─────────┼─────────┼─────────┼─────────┼──────────────╢
+║ castVote                 │ 84507   │ 84520   │ 84529   │ 84529   │ 5            ║
+║ getDispute               │ 46525   │ 46615   │ 46615   │ 46704   │ 2            ║
+║ openDispute              │ 189069  │ 189069  │ 189069  │ 189069  │ 7            ║
+║ resolveDispute           │ 67334   │ 96604   │ 96604   │ 125873  │ 2            ║
+║ submitRespondentEvidence │ 54514   │ 54514   │ 54514   │ 54514   │ 2            ║
+╟──────────────────────────┼─────────┼─────────┼─────────┼─────────┼──────────────╢
+║ Deployment               │ Min     │ Average │ Median  │ Max     │ #deployments ║
+╟──────────────────────────┼─────────┼─────────┼─────────┼─────────┼──────────────╢
+║                          │ 2535730 │ 2535740 │ 2535742 │ 2535742 │ 10           ║
+╟──────────────────────────┼─────────┼─────────┴─────────┴─────────┴──────────────╢
+║ Bytecode size            │ 11059   │                                            ║
+╚══════════════════════════╧═════════╧════════════════════════════════════════════╝
+╔═════════════════════════════════════════════════════════════════════════════════╗
+║ contracts/MusicMarketplace.sol:MusicMarketplace                                 ║
+╟──────────────────────────┬─────────┬─────────┬─────────┬─────────┬──────────────╢
+║ Function name            │ Min     │ Average │ Median  │ Max     │ #calls       ║
+╟──────────────────────────┼─────────┼─────────┼─────────┼─────────┼──────────────╢
+║ buyNFT                   │ 100537  │ 100537  │ 100537  │ 100537  │ 1            ║
+║ cancelListing            │ 34666   │ 34666   │ 34666   │ 34666   │ 2            ║
+║ feeRecipient             │ 23639   │ 23639   │ 23639   │ 23639   │ 1            ║
+║ getActiveListings        │ 30368   │ 30368   │ 30368   │ 30368   │ 1            ║
+║ getListing               │ 31042   │ 31042   │ 31042   │ 31042   │ 4            ║
+║ listNFT                  │ 156579  │ 156579  │ 156579  │ 156579  │ 7            ║
+║ musicNFT                 │ 23812   │ 23812   │ 23812   │ 23812   │ 1            ║
+║ platformFeeBps           │ 23512   │ 23512   │ 23512   │ 23512   │ 1            ║
+║ updatePrice              │ 33015   │ 33015   │ 33015   │ 33015   │ 1            ║
+╟──────────────────────────┼─────────┼─────────┼─────────┼─────────┼──────────────╢
+║ Deployment               │ Min     │ Average │ Median  │ Max     │ #deployments ║
+╟──────────────────────────┼─────────┼─────────┼─────────┼─────────┼──────────────╢
+║                          │ 1879454 │ 1879465 │ 1879466 │ 1879466 │ 11           ║
+╟──────────────────────────┼─────────┼─────────┴─────────┴─────────┴──────────────╢
+║ Bytecode size            │ 7907    │                                            ║
+╚══════════════════════════╧═════════╧════════════════════════════════════════════╝
+╔═════════════════════════════════════════════════════════════════════════════════╗
+║ contracts/MusicNFT.sol:MusicNFT                                                 ║
+╟──────────────────────────┬─────────┬─────────┬─────────┬─────────┬──────────────╢
+║ Function name            │ Min     │ Average │ Median  │ Max     │ #calls       ║
+╟──────────────────────────┼─────────┼─────────┼─────────┼─────────┼──────────────╢
+║ approve                  │ 49066   │ 49066   │ 49066   │ 49066   │ 7            ║
+║ getCollectible           │ 40719   │ 40723   │ 40719   │ 40731   │ 3            ║
+║ isApprovedForAll         │ 3286    │ 3286    │ 3286    │ 3286    │ 1            ║
+║ mintCollectible          │ 253865  │ 298262  │ 292667  │ 345768  │ 20           ║
+║ name                     │ 24438   │ 24438   │ 24438   │ 24438   │ 1            ║
+║ owner                    │ 23668   │ 23668   │ 23668   │ 23668   │ 1            ║
+║ ownerOf                  │ 3093    │ 15203   │ 24285   │ 24285   │ 7            ║
+║ symbol                   │ 24504   │ 24504   │ 24504   │ 24504   │ 1            ║
+║ tokenURI                 │ 6272    │ 18978   │ 18978   │ 31683   │ 2            ║
+║ totalMinted              │ 2476    │ 18274   │ 23540   │ 23540   │ 4            ║
+║ transferFrom             │ 55650   │ 55650   │ 55650   │ 55650   │ 1            ║
+╟──────────────────────────┼─────────┼─────────┼─────────┼─────────┼──────────────╢
+║ Deployment               │ Min     │ Average │ Median  │ Max     │ #deployments ║
+╟──────────────────────────┼─────────┼─────────┼─────────┼─────────┼──────────────╢
+║                          │ 3179642 │ 3179652 │ 3179654 │ 3179654 │ 26           ║
+╟──────────────────────────┼─────────┼─────────┴─────────┴─────────┴──────────────╢
+║ Bytecode size            │ 13975   │                                            ║
+╚══════════════════════════╧═════════╧════════════════════════════════════════════╝
+╔═════════════════════════════════════════════════════════════════════════════════╗
+║ contracts/MusicRegistry.sol:MusicRegistry                                       ║
+╟──────────────────────────┬─────────┬─────────┬─────────┬─────────┬──────────────╢
+║ Function name            │ Min     │ Average │ Median  │ Max     │ #calls       ║
+╟──────────────────────────┼─────────┼─────────┼─────────┼─────────┼──────────────╢
+║ getTrack                 │ 8140    │ 37487   │ 38736   │ 49344   │ 16           ║
+║ getTracksByArtist        │ 24894   │ 54854   │ 54871   │ 84797   │ 3            ║
+║ incrementPlayCount       │ 30914   │ 41174   │ 48014   │ 48014   │ 5            ║
+║ setDisputeResolver       │ 46318   │ 46329   │ 46330   │ 46330   │ 10           ║
+║ totalTracks              │ 2455    │ 16498   │ 23519   │ 23519   │ 3            ║
+║ uploadTrack              │ 267174  │ 268326  │ 267354  │ 290078  │ 55           ║
+╟──────────────────────────┼─────────┼─────────┼─────────┼─────────┼──────────────╢
+║ Deployment               │ Min     │ Average │ Median  │ Max     │ #deployments ║
+╟──────────────────────────┼─────────┼─────────┼─────────┼─────────┼──────────────╢
+║                          │ 2245656 │ 2245656 │ 2245656 │ 2245656 │ 77           ║
+╟──────────────────────────┼─────────┼─────────┴─────────┴─────────┴──────────────╢
+║ Bytecode size            │ 10030   │                                            ║
+╚══════════════════════════╧═════════╧════════════════════════════════════════════╝
+╔═════════════════════════════════════════════════════════════════════════════════╗
+║ contracts/Payment.sol:Payment                                                   ║
+╟──────────────────────────┬─────────┬─────────┬─────────┬─────────┬──────────────╢
+║ Function name            │ Min     │ Average │ Median  │ Max     │ #calls       ║
+╟──────────────────────────┼─────────┼─────────┼─────────┼─────────┼──────────────╢
+║ earningsOf               │ 2896    │ 18205   │ 24328   │ 24328   │ 7            ║
+║ streamPayment            │ 131459  │ 131459  │ 131459  │ 131459  │ 1            ║
+║ tipArtist                │ 34407   │ 63721   │ 68607   │ 68607   │ 7            ║
+║ withdrawEarnings         │ 33042   │ 33053   │ 33042   │ 33097   │ 5            ║
+╟──────────────────────────┼─────────┼─────────┼─────────┼─────────┼──────────────╢
+║ Deployment               │ Min     │ Average │ Median  │ Max     │ #deployments ║
+╟──────────────────────────┼─────────┼─────────┼─────────┼─────────┼──────────────╢
+║                          │ 1305413 │ 1305423 │ 1305425 │ 1305425 │ 15           ║
+╟──────────────────────────┼─────────┼─────────┴─────────┴─────────┴──────────────╢
+║ Bytecode size            │ 5440    │                                            ║
+╚══════════════════════════╧═════════╧════════════════════════════════════════════╝
+╔═════════════════════════════════════════════════════════════════════════════════╗
+║ contracts/SharedOwnership.sol:SharedOwnership                                   ║
+╟──────────────────────────┬─────────┬─────────┬─────────┬─────────┬──────────────╢
+║ Function name            │ Min     │ Average │ Median  │ Max     │ #calls       ║
+╟──────────────────────────┼─────────┼─────────┼─────────┼─────────┼──────────────╢
+║ clearShares              │ 44512   │ 44512   │ 44512   │ 44512   │ 1            ║
+║ distributeRevenue        │ 74691   │ 92393   │ 92393   │ 110095  │ 2            ║
+║ getShares                │ 27164   │ 32156   │ 32156   │ 37148   │ 2            ║
+║ hasShares                │ 24008   │ 24008   │ 24008   │ 24008   │ 2            ║
+║ setDisputeResolution     │ 46296   │ 46307   │ 46308   │ 46308   │ 17           ║
+║ setShares                │ 201940  │ 211613  │ 202360  │ 249045  │ 5            ║
+╟──────────────────────────┼─────────┼─────────┼─────────┼─────────┼──────────────╢
+║ Deployment               │ Min     │ Average │ Median  │ Max     │ #deployments ║
+╟──────────────────────────┼─────────┼─────────┼─────────┼─────────┼──────────────╢
+║                          │ 1675073 │ 1675084 │ 1675085 │ 1675085 │ 18           ║
+╟──────────────────────────┼─────────┼─────────┴─────────┴─────────┴──────────────╢
+║ Bytecode size            │ 7044    │                                            ║
+╚══════════════════════════╧═════════╧════════════════════════════════════════════╝
+╔═════════════════════════════════════════════════════════════════════════════════╗
+║ contracts/TicketNFT.sol:TicketNFT                                               ║
+╟──────────────────────────┬─────────┬─────────┬─────────┬─────────┬──────────────╢
+║ Function name            │ Min     │ Average │ Median  │ Max     │ #calls       ║
+╟──────────────────────────┼─────────┼─────────┼─────────┼─────────┼──────────────╢
+║ approve                  │ 49011   │ 49011   │ 49011   │ 49011   │ 1            ║
+║ mintTicket               │ 128776  │ 129590  │ 128986  │ 131611  │ 4            ║
+║ ownerOf                  │ 3071    │ 12158   │ 3071    │ 24275   │ 7            ║
+║ setMinter                │ 48098   │ 48108   │ 48110   │ 48110   │ 7            ║
+║ ticketToConcert          │ 2798    │ 13400   │ 13400   │ 24002   │ 2            ║
+╟──────────────────────────┼─────────┼─────────┼─────────┼─────────┼──────────────╢
+║ Deployment               │ Min     │ Average │ Median  │ Max     │ #deployments ║
+╟──────────────────────────┼─────────┼─────────┼─────────┼─────────┼──────────────╢
+║                          │ 2435286 │ 2435286 │ 2435286 │ 2435286 │ 7            ║
+╟──────────────────────────┼─────────┼─────────┴─────────┴─────────┴──────────────╢
+║ Bytecode size            │ 10501   │                                            ║
+╚══════════════════════════╧═════════╧════════════════════════════════════════════╝
+╔═════════════════════════════════════════════════════════════════════════════════╗
+║ test/AuctionTest.sol:ProxyAccount                                               ║
+╟──────────────────────────┬─────────┬─────────┬─────────┬─────────┬──────────────╢
+║ Function name            │ Min     │ Average │ Median  │ Max     │ #calls       ║
+╟──────────────────────────┼─────────┼─────────┼─────────┼─────────┼──────────────╢
+║ approve                  │ 53396   │ 53396   │ 53396   │ 53396   │ 1            ║
+║ createAuction            │ 211236  │ 211236  │ 211236  │ 211236  │ 1            ║
+║ placeBid                 │ 71552   │ 77329   │ 77329   │ 83106   │ 2            ║
+╟──────────────────────────┼─────────┼─────────┼─────────┼─────────┼──────────────╢
+║ Deployment               │ Min     │ Average │ Median  │ Max     │ #deployments ║
+╟──────────────────────────┼─────────┼─────────┼─────────┼─────────┼──────────────╢
+║                          │ 406010  │ 406010  │ 406010  │ 406010  │ 3            ║
+╟──────────────────────────┼─────────┼─────────┴─────────┴─────────┴──────────────╢
+║ Bytecode size            │ 1633    │                                            ║
+╚══════════════════════════╧═════════╧════════════════════════════════════════════╝
+╔═════════════════════════════════════════════════════════════════════════════════╗
+║ test/BeatTokenTest.sol:NonOwner                                                 ║
+╟──────────────────────────┬─────────┬─────────┬─────────┬─────────┬──────────────╢
+║ Function name            │ Min     │ Average │ Median  │ Max     │ #calls       ║
+╟──────────────────────────┼─────────┼─────────┼─────────┼─────────┼──────────────╢
+║ tryMint                  │ 31330   │ 31330   │ 31330   │ 31330   │ 1            ║
+╟──────────────────────────┼─────────┼─────────┼─────────┼─────────┼──────────────╢
+║ Deployment               │ Min     │ Average │ Median  │ Max     │ #deployments ║
+╟──────────────────────────┼─────────┼─────────┼─────────┼─────────┼──────────────╢
+║                          │ 314797  │ 314797  │ 314797  │ 314797  │ 1            ║
+╟──────────────────────────┼─────────┼─────────┴─────────┴─────────┴──────────────╢
+║ Bytecode size            │ 1089    │                                            ║
+╚══════════════════════════╧═════════╧════════════════════════════════════════════╝
+╔═════════════════════════════════════════════════════════════════════════════════╗
+║ test/ConcertManagerTest.sol:ArtistProxy                                         ║
+╟──────────────────────────┬─────────┬─────────┬─────────┬─────────┬──────────────╢
+║ Function name            │ Min     │ Average │ Median  │ Max     │ #calls       ║
+╟──────────────────────────┼─────────┼─────────┼─────────┼─────────┼──────────────╢
+║ createConcert            │ 243442  │ 243442  │ 243442  │ 243442  │ 1            ║
+╟──────────────────────────┼─────────┼─────────┼─────────┼─────────┼──────────────╢
+║ Deployment               │ Min     │ Average │ Median  │ Max     │ #deployments ║
+╟──────────────────────────┼─────────┼─────────┼─────────┼─────────┼──────────────╢
+║                          │ 299765  │ 299765  │ 299765  │ 299765  │ 1            ║
+╟──────────────────────────┼─────────┼─────────┴─────────┴─────────┴──────────────╢
+║ Bytecode size            │ 1145    │                                            ║
+╚══════════════════════════╧═════════╧════════════════════════════════════════════╝
+╔═════════════════════════════════════════════════════════════════════════════════╗
+║ test/ConcertManagerTest.sol:BuyerProxy                                          ║
+╟──────────────────────────┬─────────┬─────────┬─────────┬─────────┬──────────────╢
+║ Function name            │ Min     │ Average │ Median  │ Max     │ #calls       ║
+╟──────────────────────────┼─────────┼─────────┼─────────┼─────────┼──────────────╢
+║ buy                      │ 321439  │ 321439  │ 321439  │ 321439  │ 1            ║
+╟──────────────────────────┼─────────┼─────────┼─────────┼─────────┼──────────────╢
+║ Deployment               │ Min     │ Average │ Median  │ Max     │ #deployments ║
+╟──────────────────────────┼─────────┼─────────┼─────────┼─────────┼──────────────╢
+║                          │ 269193  │ 269193  │ 269193  │ 269193  │ 1            ║
+╟──────────────────────────┼─────────┼─────────┴─────────┴─────────┴──────────────╢
+║ Bytecode size            │ 1000    │                                            ║
+╚══════════════════════════╧═════════╧════════════════════════════════════════════╝
+╔═════════════════════════════════════════════════════════════════════════════════╗
+║ test/DisputeResolutionTest.sol:ClaimantProxy                                    ║
+╟──────────────────────────┬─────────┬─────────┬─────────┬─────────┬──────────────╢
+║ Function name            │ Min     │ Average │ Median  │ Max     │ #calls       ║
+╟──────────────────────────┼─────────┼─────────┼─────────┼─────────┼──────────────╢
+║ openDispute              │ 201103  │ 201103  │ 201103  │ 201103  │ 1            ║
+╟──────────────────────────┼─────────┼─────────┼─────────┼─────────┼──────────────╢
+║ Deployment               │ Min     │ Average │ Median  │ Max     │ #deployments ║
+╟──────────────────────────┼─────────┼─────────┼─────────┼─────────┼──────────────╢
+║                          │ 293613  │ 293613  │ 293613  │ 293613  │ 1            ║
+╟──────────────────────────┼─────────┼─────────┴─────────┴─────────┴──────────────╢
+║ Bytecode size            │ 1113    │                                            ║
+╚══════════════════════════╧═════════╧════════════════════════════════════════════╝
+╔═════════════════════════════════════════════════════════════════════════════════╗
+║ test/MusicMarketplaceTest.sol:BuyerProxy                                        ║
+╟──────────────────────────┬─────────┬─────────┬─────────┬─────────┬──────────────╢
+║ Function name            │ Min     │ Average │ Median  │ Max     │ #calls       ║
+╟──────────────────────────┼─────────┼─────────┼─────────┼─────────┼──────────────╢
+║ buy                      │ 111484  │ 111484  │ 111484  │ 111484  │ 1            ║
+╟──────────────────────────┼─────────┼─────────┼─────────┼─────────┼──────────────╢
+║ Deployment               │ Min     │ Average │ Median  │ Max     │ #deployments ║
+╟──────────────────────────┼─────────┼─────────┼─────────┼─────────┼──────────────╢
+║                          │ 244956  │ 244956  │ 244956  │ 244956  │ 1            ║
+╟──────────────────────────┼─────────┼─────────┴─────────┴─────────┴──────────────╢
+║ Bytecode size            │ 888     │                                            ║
+╚══════════════════════════╧═════════╧════════════════════════════════════════════╝
+╔═════════════════════════════════════════════════════════════════════════════════╗
+║ test/MusicMarketplaceTest.sol:SellerProxy                                       ║
+╟──────────────────────────┬─────────┬─────────┬─────────┬─────────┬──────────────╢
+║ Function name            │ Min     │ Average │ Median  │ Max     │ #calls       ║
+╟──────────────────────────┼─────────┼─────────┼─────────┼─────────┼──────────────╢
+║ list                     │ 156694  │ 156694  │ 156694  │ 156694  │ 1            ║
+║ uploadMintAndApprove     │ 512107  │ 512107  │ 512107  │ 512107  │ 1            ║
+╟──────────────────────────┼─────────┼─────────┼─────────┼─────────┼──────────────╢
+║ Deployment               │ Min     │ Average │ Median  │ Max     │ #deployments ║
+╟──────────────────────────┼─────────┼─────────┼─────────┼─────────┼──────────────╢
+║                          │ 563951  │ 563951  │ 563951  │ 563951  │ 1            ║
+╟──────────────────────────┼─────────┼─────────┴─────────┴─────────┴──────────────╢
+║ Bytecode size            │ 2372    │                                            ║
+╚══════════════════════════╧═════════╧════════════════════════════════════════════╝
+╔═════════════════════════════════════════════════════════════════════════════════╗
+║ test/MusicNFTTest.sol:ArtistProxy                                               ║
+╟──────────────────────────┬─────────┬─────────┬─────────┬─────────┬──────────────╢
+║ Function name            │ Min     │ Average │ Median  │ Max     │ #calls       ║
+╟──────────────────────────┼─────────┼─────────┼─────────┼─────────┼──────────────╢
+║ doMint                   │ 259797  │ 261584  │ 262357  │ 262597  │ 3            ║
+║ doUploadTrack            │ 270011  │ 270011  │ 270011  │ 270011  │ 2            ║
+╟──────────────────────────┼─────────┼─────────┼─────────┼─────────┼──────────────╢
+║ Deployment               │ Min     │ Average │ Median  │ Max     │ #deployments ║
+╟──────────────────────────┼─────────┼─────────┼─────────┼─────────┼──────────────╢
+║                          │ 487745  │ 487745  │ 487745  │ 487745  │ 2            ║
+╟──────────────────────────┼─────────┼─────────┴─────────┴─────────┴──────────────╢
+║ Bytecode size            │ 2017    │                                            ║
+╚══════════════════════════╧═════════╧════════════════════════════════════════════╝
+╔═════════════════════════════════════════════════════════════════════════════════╗
+║ test/PaymentTest.sol:FanProxy                                                   ║
+╟──────────────────────────┬─────────┬─────────┬─────────┬─────────┬──────────────╢
+║ Function name            │ Min     │ Average │ Median  │ Max     │ #calls       ║
+╟──────────────────────────┼─────────┼─────────┼─────────┼─────────┼──────────────╢
+║ tip                      │ 79350   │ 79350   │ 79350   │ 79350   │ 2            ║
+╟──────────────────────────┼─────────┼─────────┼─────────┼─────────┼──────────────╢
+║ Deployment               │ Min     │ Average │ Median  │ Max     │ #deployments ║
+╟──────────────────────────┼─────────┼─────────┼─────────┼─────────┼──────────────╢
+║                          │ 146179  │ 146179  │ 146179  │ 146179  │ 2            ║
+╟──────────────────────────┼─────────┼─────────┴─────────┴─────────┴──────────────╢
+║ Bytecode size            │ 430     │                                            ║
+╚══════════════════════════╧═════════╧════════════════════════════════════════════╝
+
+

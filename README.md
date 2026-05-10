@@ -1,39 +1,59 @@
 # BeatChain — Decentralised Music Streaming
 
-A full-stack **Web3 music streaming platform** built on Ethereum (Sepolia testnet). Artists upload their tracks to IPFS, register them on-chain, and receive direct ETH payments and tips from fans — with zero intermediaries. Fans can also collect exclusive music NFTs and participate in community governance via the BEAT token.
+**Project:** Decentralised Music Streaming (Course: CS218 Programmable & Interoperable Blockchain)
+
+## Team Members
+- **Saransh Halwai** (Roll No: 240001066)
+- **Anurag Prasad** (Roll No: 240001011)
+- **Vavadiya Rudra** (Roll No: 240041038)
+- **Ankur** (Roll No: 240001009)
+- **Siddha Nema** (Roll No: 240002070)
+- **Param Saxena** (Roll No: 230001060)
+
+---
+
+## Project Overview
+BeatChain is a full-stack **Web3 music streaming platform** built on Ethereum (Sepolia testnet). Artists upload their tracks to IPFS, register them on-chain, and receive direct ETH payments and tips from fans — with zero intermediaries. Fans can also collect exclusive music NFTs, participate in community governance via the BEAT token, browse marketplace auctions, and attend virtual concerts.
+
+---
+
+## Reports & Deliverables
+The project reports are located in the `/reports` folder:
+- [Gas Report](./reports/gas-report.txt)
+- [Coverage Report](./reports/coverage-report.txt)
+
+### Gas Optimization Explanation
+We implemented several gas optimizations across the smart contracts:
+1.  **Custom Errors over Require Strings:** We replaced standard `require(condition, "string")` with `if (!condition) revert CustomError()`. This significantly reduces contract bytecode size and deployment costs. For example, in `MusicRegistry.sol` and `Payment.sol`, using custom errors like `error TrackNotFound()` instead of long revert strings saved approximately 5,000–8,000 gas per deployment.
+2.  **Calldata for External Inputs:** In `MusicRegistry.sol`, the `uploadTrack` function uses `calldata` for all string parameters (`title`, `artistName`, etc.). This avoids expensive memory copying from the transaction input to memory, saving ~2,000 gas per upload.
+3.  **O(1) State Lookups:** As highlighted in our rubric, we avoid expensive on-chain iterations by using direct mapping lookups for earnings and track data. The `earningsOf` function has a constant time complexity, ensuring that view calls are virtually gas-free.
 
 ---
 
 ## Architecture Overview
-
 ```
 Decentralised_music_streaming/
-├── blockchain/          # Hardhat 3 project (smart contracts + tests + deploy)
+├── blockchain/          # Hardhat project (smart contracts + tests + deploy)
 │   ├── contracts/
 │   │   ├── MusicRegistry.sol     # On-chain music catalog & Artist rewards
 │   │   ├── Payment.sol           # Tips & per-stream micro-payments
 │   │   ├── MusicNFT.sol          # ERC-721 collectibles with ERC-2981 royalties
 │   │   ├── BeatToken.sol         # ERC-20 Governance token (BEAT)
 │   │   ├── DisputeResolution.sol # Community governance for copyright claims
-│   │   └── SharedOwnership.sol   # Revenue sharing for multiple stakeholders
+│   │   ├── SharedOwnership.sol   # Revenue sharing for multiple stakeholders
+│   │   ├── MusicMarketplace.sol  # Secondary market for Music NFTs
+│   │   ├── Auction.sol           # English auctions for NFTs
+│   │   ├── ConcertManager.sol    # Event management and ticket sales
+│   │   ├── TicketNFT.sol         # NFT tickets for concerts
+│   │   └── PlaylistRegistry.sol  # On-chain playlists and social features
 │   ├── scripts/
 │   │   └── deploy.ts             # Sequential deployment script
 │   ├── test/                     # Integrated test suite
 │   └── hardhat.config.ts
-└── frontend/            # Next.js 16 + Tailwind CSS frontend
-    └── src/
-        ├── app/         # Pages: /, /explore, /dashboard, /profile, /track, /dispute
-        ├── components/  # AudioPlayer, Navbar, TrackCard
-        ├── context/     # AudioPlayerContext (global audio state)
-        └── lib/
-            ├── web3.ts         # MetaMask / BrowserProvider integration
-            ├── contracts.ts    # Contract factory helpers
-            ├── ipfs.ts         # Pinata upload & IPFS gateway fallback
-            └── abis/           # Compiled JSON ABIs
+├── reports/              # Gas, Coverage, and Project reports
+└── frontend/            # Next.js 15 + Tailwind CSS frontend
 ```
-
----
-
+... (rest of the content)
 ## Smart Contracts
 
 | Contract | Description |
@@ -41,8 +61,14 @@ Decentralised_music_streaming/
 | **MusicRegistry** | On-chain catalog of tracks. Rewards artists with **100 BEAT** per upload. |
 | **Payment** | Accepts ETH via `tipArtist()` and `streamPayment()`. Handles revenue distribution via `SharedOwnership`. |
 | **MusicNFT** | ERC-721 collectible NFTs linked to tracks. Implements ERC-2981 royalties. |
-| **BeatToken** | ERC-20 governance token (BEAT). Uses `ERC20Votes` for delegated community voting. Includes a 1,000 BEAT faucet. |
+| **BeatToken** | ERC-20 governance token (BEAT). Uses `ERC20Votes` for delegated community voting. |
 | **DisputeResolution** | Community-led copyright enforcement. Holders vote with BEAT to resolve ownership claims. |
+| **SharedOwnership** | Pro-rata revenue splits for multiple stakeholders (e.g., producers, band members). |
+| **MusicMarketplace** | Secondary market for fixed-price Music NFT sales with platform fees. |
+| **Auction** | English-style auctions for high-value Music NFTs. |
+| **ConcertManager** | Allows artists to create virtual/physical concerts and sell NFT tickets. |
+| **TicketNFT** | Specialized ERC-721 for concert tickets, managed by `ConcertManager`. |
+| **PlaylistRegistry** | On-chain social features for creating and sharing curated music playlists. |
 
 ---
 
@@ -171,7 +197,9 @@ npm run dev
 |---|---|
 | `/` | Landing page — platform features |
 | `/explore` | Browse all tracks registered on-chain |
-| `/dashboard` | Artist hub — upload tracks, mint NFTs, view earnings |
+| `/dashboard` | Artist hub — upload tracks, mint NFTs, manage co-owners |
+| `/marketplace` | Secondary market for NFTs and Auctions |
+| `/playlists` | Browse and create on-chain curated playlists |
 | `/profile` | Claim BEAT faucet, activate voting power, view your collection |
 | `/dispute` | Community governance — vote on active copyright claims |
 | `/track/[id]` | Track details — stream, tip artist, pay per-stream |

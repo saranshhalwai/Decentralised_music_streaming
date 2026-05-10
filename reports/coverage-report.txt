@@ -1,0 +1,208 @@
+◇ injected env (0) from .env // tip: ◈ encrypted .env [www.dotenvx.com]
+
+Compiled 23 Solidity files with solc 0.8.28 (evm target: cancun)
+
+Running Solidity tests
+
+  test/ConcertManagerTest.sol:ConcertManagerTest
+    ✔ testCreateAndBuyTicket()
+
+  test/TicketNFTTest.sol:TicketNFTTest
+    ✔ testSetMinterAndMint()
+
+  test/CounterTest.sol:CounterTest
+    ✔ testSumOfIncrementsMatches()
+    ✔ testIncrementEvent()
+
+  test/AuctionTest.sol:AuctionTest
+    ✔ testAuctionBids()
+
+  test/BeatTokenTest.sol:BeatTokenTest
+    ✔ testOwnerCanMint()
+    ✔ testNonOwnerCannotMint()
+    ✔ testDeployment()
+
+  test/PaymentTest.sol:PaymentTest
+    ✔ testWithdrawEarningsResets()
+    ✔ testTipArtistAndEarnings()
+
+  test/MusicMarketplaceTest.sol:MusicMarketplaceTest
+    ✔ testListAndBuy()
+
+  test/MusicRegistryTest.sol:MusicRegistryTest
+    ✔ testUploadAndGetTrack()
+    ✔ testIncrementPlayCount()
+    ✔ testEmptyFieldReverts()
+
+  test/DisputeResolutionTest.sol:DisputeResolutionTest
+    ✔ testOpenDisputeAndSubmitEvidence()
+
+  test/SharedOwnershipTest.sol:SharedOwnershipTest
+    ✔ testSetSharesAndDistribute()
+
+  test/MusicNFTTest.sol:MusicNFTTest
+    ✔ testTotalMinted()
+    ✔ testMintCollectible()
+
+Running Mocha tests
+
+
+  Auction
+    ✔ should run a simple auction lifecycle (123ms)
+
+  BeatToken
+    Deployment
+      ✔ Should assign the total supply of tokens to the owner
+      ✔ Should set the correct token name and symbol
+    Minting
+      ✔ Should allow the owner to mint more tokens
+      ✔ Should not allow non-owners to mint tokens
+    Voting
+      ✔ Should allow users to delegate and have voting power
+
+  ConcertManager
+    ✔ should create a concert and allow buying a ticket (64ms)
+    ✔ should let artist update ticket price and withdraw funds (74ms)
+
+  Counter
+    ✔ Should emit the Increment event when calling the inc() function
+    ✔ The sum of the Increment events should match the current value (54ms)
+
+  DisputeResolution
+    Opening Disputes
+      ✔ Should allow a user to open a dispute with sufficient stake
+      ✔ Should fail if stake is insufficient
+      ✔ Should fail if artist disputes their own track
+    Submitting Evidence
+      ✔ Should allow respondent to submit evidence
+      ✔ Should fail if not respondent
+    Voting and Resolution
+      ✔ Should allow voters to cast votes
+      ✔ Should resolve in favor of claimant when they have more votes
+      ✔ Should resolve in favor of respondent on tie or when they have more votes
+      ✔ Should fail to resolve before deadline
+
+  MusicMarketplace
+    Deployment
+      ✔ Should set the correct musicNFT address and fee recipient
+    Listing NFTs
+      ✔ Should allow the owner to list an NFT
+      ✔ Should fail to list if not approved
+      ✔ Should fail to list if not owner
+    Buying NFTs
+      ✔ Should allow a user to buy an active listing
+      ✔ Should fail to buy if price mismatch
+      ✔ Should fail to buy if not active
+    Managing Listings
+      ✔ Should allow seller to cancel listing
+      ✔ Should allow seller to update price
+      ✔ Should fail to cancel if not seller
+
+  MusicNFT
+    Deployment
+      ✔ should deploy with correct name and symbol (40ms)
+      ✔ should set the deployer as owner (46ms)
+      ✔ should start with 0 tokens minted (42ms)
+    mintCollectible
+      ✔ should mint a token and emit CollectibleMinted (53ms)
+      ✔ should assign ownership to the 'to' address (60ms)
+      ✔ should set the correct tokenURI (54ms)
+      ✔ should record collectible metadata correctly (52ms)
+      ✔ should assign sequential token IDs (66ms)
+      ✔ should revert with EmptyMetadataURI if metadataURI is empty (53ms)
+      ✔ should allow minting to oneself (50ms)
+    getCollectible
+      ✔ should revert with TokenNotFound for a non-existent tokenId (38ms)
+    totalMinted
+      ✔ should increase after each mint (72ms)
+    ERC-721 transfers
+      ✔ should allow NFT transfer between accounts (60ms)
+
+  MusicRegistry
+    uploadTrack
+      ✔ should upload a track and emit TrackUploaded event
+      ✔ should assign sequential IDs starting from 0
+      ✔ should revert with EmptyField if title is empty
+      ✔ should revert with EmptyField if ipfsCID is empty
+      ✔ should revert with EmptyField if coverArtCID is empty
+      ✔ should store the correct artist address
+      ✔ should store all track fields correctly
+    getTrack
+      ✔ should revert with TrackNotFound for non-existent trackId
+    getTracksByArtist
+      ✔ should return an empty array for an artist with no tracks
+      ✔ should return all tracks for a specific artist (44ms)
+    incrementPlayCount
+      ✔ should increment play count and emit PlayCountIncremented event
+      ✔ should allow multiple play count increments (41ms)
+      ✔ should revert with TrackNotFound for non-existent trackId
+    totalTracks
+      ✔ should return 0 before any uploads
+      ✔ should return the correct count after uploads
+
+  Payment
+    tipArtist
+      ✔ should credit artist earnings and emit TipReceived (43ms)
+      ✔ should accumulate tips from multiple fans (45ms)
+      ✔ should revert with ZeroValue when msg.value is 0
+      ✔ should revert with ZeroAddress when artist is zero address
+    streamPayment
+      ✔ should credit artist and emit StreamPayment (45ms)
+      ✔ should revert with ZeroValue when msg.value is 0 (45ms)
+      ✔ should revert with TrackNotFound for non-existent trackId
+    withdrawEarnings
+      ✔ should transfer accumulated earnings to artist and emit event (44ms)
+      ✔ should zero out earnings after withdrawal (45ms)
+      ✔ should emit EarningsWithdrawn event (42ms)
+      ✔ should revert with NoEarnings if balance is zero
+      ✔ should not allow double withdrawal (47ms)
+    earningsOf
+      ✔ should return 0 for an artist with no tips
+
+  SharedOwnership
+    Setting Shares
+      ✔ Should allow the track owner to set shares
+      ✔ Should fail if not track owner
+      ✔ Should fail if basis points do not sum to 10000
+      ✔ Should fail if lengths mismatch
+    Distributing Revenue
+      ✔ Should correctly distribute revenue based on shares
+    Clearing Shares
+      ✔ Should allow the dispute resolver to clear shares
+      ✔ Should fail to clear if not dispute resolver
+
+  TicketNFT
+    ✔ should allow setting a minter and mint tickets
+
+
+  78 passing (5s)
+
+
+96 passing (18 solidity, 78 mocha)
+
+Saved html report to /home/saransh/code/Decentralised_music_streaming/blockchain/coverage/html
+╔═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════╗
+║                                                  Coverage Report                                                  ║
+╚═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════╝
+╔═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════╗
+║ File Coverage                                                                                                     ║
+╟─────────────────────────────────┬────────┬─────────────┬──────────────────────────────────────────────────────────╢
+║ File Path                       │ Line % │ Statement % │ Uncovered Lines                                          ║
+╟─────────────────────────────────┼────────┼─────────────┼──────────────────────────────────────────────────────────╢
+║ contracts/Auction.sol           │ 79.55  │ 71.79       │ 79, 84-85, 90-95                                         ║
+║ contracts/Counter.sol           │ 100.00 │ 100.00      │ -                                                        ║
+║ contracts/PlaylistRegistry.sol  │ 0.00   │ 0.00        │ 42-43, 45-46, 48-56, 58, 60-66, 70-71, 75, 79, 83-86, 88 ║
+║ contracts/ConcertManager.sol    │ 85.00  │ 77.27       │ 54, 137-138, 142-143, 147, 151-153                       ║
+║ contracts/TicketNFT.sol         │ 100.00 │ 100.00      │ -                                                        ║
+║ contracts/BeatToken.sol         │ 37.50  │ 37.50       │ 20, 24-26, 49                                            ║
+║ contracts/MusicRegistry.sol     │ 86.54  │ 81.40       │ 82, 100-101, 125, 145-146, 173                           ║
+║ contracts/DisputeResolution.sol │ 100.00 │ 100.00      │ -                                                        ║
+║ contracts/Payment.sol           │ 67.86  │ 69.44       │ 88, 92-97, 109, 129                                      ║
+║ contracts/SharedOwnership.sol   │ 96.30  │ 97.14       │ 48                                                       ║
+║ contracts/MusicNFT.sol          │ 79.17  │ 72.73       │ 83, 125, 130-132                                         ║
+║ contracts/MusicMarketplace.sol  │ 93.55  │ 92.19       │ 57, 61-63                                                ║
+╟─────────────────────────────────┼────────┼─────────────┼──────────────────────────────────────────────────────────╢
+║ Total                           │ 80.54  │ 79.58       │                                                          ║
+╚═════════════════════════════════╧════════╧═════════════╧══════════════════════════════════════════════════════════╝
+
+
